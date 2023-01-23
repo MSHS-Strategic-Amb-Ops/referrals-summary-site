@@ -13,10 +13,11 @@ output:
 <style type="text/css">
 div.main-container {
   max-width: 2000px;
-  margin-left: auto;
+  margin-left: 0;
   margin-right: auto;
 }
 </style>
+
 <style>
 .tocify {
 color: black;
@@ -42,11 +43,14 @@ font-weight: bold;
 <!--  border: none; -->
 <!-- } -->
 </style>
+
+
 <style>
   .nav-pills>li>a:hover, .nav-pills>li>a:focus, .nav-pills>li.active>a,     .nav-pills>li.active>a:hover, .nav-pills>li.active>a:focus{
      background-color: #212070;
      }
 </style>
+
 <style>
 .container { width: 1800px; }
 h2 {
@@ -68,6 +72,35 @@ h4 {
   <!-- font-weight: bold; -->
 }
 </style>
+
+<style>
+.blackbox {
+  padding: 1em;
+  background: white;
+  color: black;
+  border: 2px solid #7f7f7f;
+  width: 100%;
+  position: center;
+  align: center;
+  margin: 0px auto;
+}
+.center {
+  text-align: left;
+  margin: 0px auto;
+}
+</style>
+
+
+<!-- ```{css toc-content, echo = FALSE} -->
+<!-- #TOC { -->
+<!--   right: 270px; -->
+<!--   margin: 20px 0px 25px 0px; -->
+<!-- } -->
+
+<!-- .main-container { -->
+<!--     margin-left: 200px; -->
+<!-- } -->
+<!-- ``` -->
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
