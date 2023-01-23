@@ -744,7 +744,7 @@ mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",
   
   referral_vol_site_data_mshs <- referral_vol_site_data_mshs %>%
     mutate(Total = sum(across(where(is.numeric)))) %>%
-    adorn_totals("row", name = paste(ifelse(length(site_input) >2, "MSHS", site_input), "Total")) %>%
+    adorn_totals("row", name = "MSHS Total") %>%
     mutate(conversion_rate = round((Total - Pending)/Total,2),
            completion_rate = round(Arrived/Total,2)) %>%
     dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate)
@@ -784,7 +784,7 @@ received_vol_site_ytd <- function(site){
   
   referral_vol_site_data <- referral_vol_site_data %>%
     mutate(Total = sum(across(where(is.numeric)))) %>%
-    adorn_totals("row", name = paste(ifelse(length(site_input) >2, "MSHS", site_input), "Total")) %>%
+    adorn_totals("row", name = paste(site, "Total")) %>%
     mutate(conversion_rate = round((Total - Pending)/Total,2),
            completion_rate = round(Arrived/Total,2)) %>%
     dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate)
