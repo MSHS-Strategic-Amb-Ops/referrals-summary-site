@@ -322,16 +322,16 @@ not_all_na <- function(x) all(!is.na(x)) # Exclude columns with All NAs
 
 ```{r Import Scheduling Data, echo = FALSE, warning = FALSE, message = FALSE}
 
-# scheduling_data_raw <- as.data.frame(readRDS("/nfs/data/Applications/Ambulatory/Data_Updated/historical_data.rds")) %>%
-#   mutate(Campus = ifelse(Campus == "MSDD", "MSDMG", Campus)) %>%
-#   filter(!is.na(Campus)) %>%
-#   filter(Campus %in% c("NETWORK","MSM","MSH-MSDFP","ONCOLOGY","MSW","MSBI","MSUS","MSH- AMBULATORY CARE","MSDMG"))
-
-
-scheduling_data_raw <- as.data.frame(readRDS("historical_data.rds")) %>%
+scheduling_data_raw <- as.data.frame(readRDS("/nfs/data/Applications/Ambulatory/Data_Updated/historical_data.rds")) %>%
   mutate(Campus = ifelse(Campus == "MSDD", "MSDMG", Campus)) %>%
   filter(!is.na(Campus)) %>%
   filter(Campus %in% c("NETWORK","MSM","MSH-MSDFP","ONCOLOGY","MSW","MSBI","MSUS","MSH- AMBULATORY CARE","MSDMG"))
+
+
+# scheduling_data_raw <- as.data.frame(readRDS("historical_data.rds")) %>%
+#   mutate(Campus = ifelse(Campus == "MSDD", "MSDMG", Campus)) %>%
+#   filter(!is.na(Campus)) %>%
+#   filter(Campus %in% c("NETWORK","MSM","MSH-MSDFP","ONCOLOGY","MSW","MSBI","MSUS","MSH- AMBULATORY CARE","MSDMG"))
 
 
 scheduling_data_raw <- scheduling_data_raw %>%
