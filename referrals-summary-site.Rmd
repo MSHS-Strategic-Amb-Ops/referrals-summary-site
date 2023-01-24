@@ -358,13 +358,19 @@ max_appt_date <- max((scheduling_data_raw %>% filter(Appt.Status == "Arrived"))$
 
 full_month <- format((lubridate::floor_date(max_appt_date, unit = "month")-1), "%B")
 full_monthNum <- format((lubridate::floor_date(max_appt_date, unit = "month")-1), "%m")
-full_monthYear <- format((lubridate::floor_date(max_appt_date, unit = "month")-1), "%Y-%m")
+full_monthYear <- format((lubridate::floor_date(max_appt_date, unit = "month")-1), "%m-%Y")
+full_yearMonth <- format((lubridate::floor_date(max_appt_date, unit = "month")-1), "%Y-%m")
+full_monthYear_label <- format((lubridate::floor_date(max_appt_date, unit = "month")-1), "%b-%Y")
 
 current_month <- format((lubridate::floor_date(max_appt_date, unit = "month")), "%B")
 current_monthNum <- format((lubridate::floor_date(max_appt_date, unit = "month")), "%m")
-current_monthYear <- format((lubridate::floor_date(max_appt_date, unit = "month")), "%Y-%m")
+current_monthYear <- format((lubridate::floor_date(max_appt_date, unit = "month")), "%m-%Y")
+current_yearMonth <- format((lubridate::floor_date(max_appt_date, unit = "month")), "%Y-%m")
+current_monthYear_label <- format((lubridate::floor_date(max_appt_date, unit = "month")), "%b-%Y")
+
 
 ```
+
 
 ```{r Scheduling Data Processing, echo = FALSE, warning = FALSE, message = FALSE}
 
@@ -455,122 +461,122 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 
 ```{r Referrals Data Importing, echo = FALSE, warning = FALSE, message = FALSE}
 
-# Connect to Database ----------------------------------------------------------
-# conn1 <- odbcConnect("Caboodle") # Connect to Server
-
-conn1 <- dbPool(drv = odbc(), dsn = "Caboodle", timeout = 30)
-
-# Import Referrals+Visit Data --------------------------------------------------
-# referrals_raw <- sqlQuery(conn1, "SELECT * FROM PRDREPORT.FullAccess.Referrals") # Master Referrals Data
-referrals_conn <- tbl(conn1, "Referrals")
-referrals_raw <- referrals_conn %>%
-  mutate(StartInstant = as.Date(StartInstant)) %>%
-  filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
-  filter(Status != "Canceled") %>%
-  collect()
-
-# Import Referrals Data for Addtional Referral Details -------------------------
-# referralFactAll <- sqlQuery(conn1, "SELECT TOP 10* FROM PRDREPORT.FullAccess.ReferralFact")
-referralFact_conn <- tbl(conn1, "ReferralFact")
-
-referralFact_raw <- referralFact_conn %>%
-  mutate(StartInstant = as.Date(StartInstant)) %>%
-  filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
-  group_by(ReferralKey, ReferredToDepartmentSpecialty, StartInstant, `_CreationInstant`, `_LastUpdatedInstant`, LastEnteredWorkqueueDateKey_X,
-           LastEnteredWorkqueueTimeKey_X, LastEnteredWorkqueueName_X,
-           Class, Priority, Redirected, Rejected, TriageRejectionReason, InAnyWorkqueue, StatusReason, SchedulingStatus,
-           FirstCallMadeInstant, FirstEncounterCreatedInstant, FirstEncounterInstant, ExpirationInstant,
-           WasPatientContactedWithin12Hours_X,
-           ProfessionalChargeAmount, ProfessionalChargeEstimate, HospitalChargeEstimate) %>%
-  summarise(total = n()) %>%
-  collect()
-
-referralFact_raw$total <- NULL
-
-# referralFact_all <- referralFact_conn %>%
+# # Connect to Database ----------------------------------------------------------
+# # conn1 <- odbcConnect("Caboodle") # Connect to Server
+# 
+# conn1 <- dbPool(drv = odbc(), dsn = "Caboodle", timeout = 30)
+# 
+# # Import Referrals+Visit Data --------------------------------------------------
+# # referrals_raw <- sqlQuery(conn1, "SELECT * FROM PRDREPORT.FullAccess.Referrals") # Master Referrals Data
+# referrals_conn <- tbl(conn1, "Referrals")
+# referrals_raw <- referrals_conn %>%
 #   mutate(StartInstant = as.Date(StartInstant)) %>%
-#   filter(StartInstant == as.Date("2022-11-03")) %>%
+#   filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
+#   filter(Status != "Canceled") %>%
 #   collect()
-
-# visitFact_conn <- tbl(conn1, "VisitFact")
-# visitFact_raw <- visitFact_conn %>%
-#   filter(AppointmentStatus == "Arrived") %>%
-#   filter(!is.na(PaymenetDue)) %>%
-#   head(10000) %>%
+# 
+# # Import Referrals Data for Addtional Referral Details -------------------------
+# # referralFactAll <- sqlQuery(conn1, "SELECT TOP 10* FROM PRDREPORT.FullAccess.ReferralFact")
+# referralFact_conn <- tbl(conn1, "ReferralFact")
+# 
+# referralFact_raw <- referralFact_conn %>%
+#   mutate(StartInstant = as.Date(StartInstant)) %>%
+#   filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
+#   group_by(ReferralKey, ReferredToDepartmentSpecialty, StartInstant, `_CreationInstant`, `_LastUpdatedInstant`, LastEnteredWorkqueueDateKey_X,
+#            LastEnteredWorkqueueTimeKey_X, LastEnteredWorkqueueName_X,
+#            Class, Priority, Redirected, Rejected, TriageRejectionReason, InAnyWorkqueue, StatusReason, SchedulingStatus,
+#            FirstCallMadeInstant, FirstEncounterCreatedInstant, FirstEncounterInstant, ExpirationInstant,
+#            WasPatientContactedWithin12Hours_X,
+#            ProfessionalChargeAmount, ProfessionalChargeEstimate, HospitalChargeEstimate) %>%
+#   summarise(total = n()) %>%
 #   collect()
-# referral_fact_all <- sqlQuery(conn1, "SELECT TOP 200 * FROM PRDREPORT.FullAccess.ReferralFact ORDER BY StartInstant")
-
-# Append Additional Referral Columns -------------------------------------------
-referrals_merged <- left_join(referrals_raw, subset(referralFact_raw, select = -c(StartInstant, Priority)))
-referrals_merged <- referrals_merged %>%
-  mutate(SentByDepID = as.character(SentByDepID),
-         ReceivedByDepID = as.character(ReceivedByDepID))
+# 
+# referralFact_raw$total <- NULL
+# 
+# # referralFact_all <- referralFact_conn %>%
+# #   mutate(StartInstant = as.Date(StartInstant)) %>%
+# #   filter(StartInstant == as.Date("2022-11-03")) %>%
+# #   collect()
+# 
+# # visitFact_conn <- tbl(conn1, "VisitFact")
+# # visitFact_raw <- visitFact_conn %>%
+# #   filter(AppointmentStatus == "Arrived") %>%
+# #   filter(!is.na(PaymenetDue)) %>%
+# #   head(10000) %>%
+# #   collect()
+# # referral_fact_all <- sqlQuery(conn1, "SELECT TOP 200 * FROM PRDREPORT.FullAccess.ReferralFact ORDER BY StartInstant")
+# 
+# # Append Additional Referral Columns -------------------------------------------
+# referrals_merged <- left_join(referrals_raw, subset(referralFact_raw, select = -c(StartInstant, Priority)))
+# referrals_merged <- referrals_merged %>%
+#   mutate(SentByDepID = as.character(SentByDepID),
+#          ReceivedByDepID = as.character(ReceivedByDepID))
 
 ```
 
 
 ```{r Referrals Data Processing, echo = FALSE, warning = FALSE, message = FALSE}
 
-# Referrals Raw Data Processing ------------------------------------------------
-## Priority Groups =============================================================
-referrals_merged <- referrals_merged %>%
-  mutate(createdWeek = floor_date(as.Date(StartInstant, "%Y-%m-%d"), unit="week", week_start = 7),
-         createdYear = format(as.Date(StartInstant, "%Y-%m-%d"),"%Y"),
-         createdMonNum = as.numeric(format(as.Date(StartInstant, "%Y-%m-%d"),"%m")),
-         createdMonth = format(as.Date(StartInstant, "%Y-%m-%d"),"%B"),
-         createdMonthYear = format(as.Date(StartInstant, "%Y-%m-%d"),"%m-%Y")) %>%
-  mutate(priority_type = case_when(str_detect(toupper(Priority), "CONVENIENCE") ~ "Patient Convenience"
-                                   ,str_detect(toupper(Priority), "2 DAYS") ~ "Within 2 Days"
-                                   ,str_detect(toupper(Priority), "1 WEEK") ~ "Within 1 Week"
-                                   ,str_detect(toupper(Priority), "2 WEEKS") ~ "Within 2 Weeks"
-                                   ,str_detect(toupper(Priority), "3-6 Days") ~ "Within 1 Week" # Question: Should this be a separate category?
-                                   ,str_detect(toupper(Priority), "7-14 Days") ~ "Within 2 Weeks"
-                                   ,Priority == "Routine" ~ "Routine"
-                                   ,TRUE ~ "Not Specified"))
+# # Referrals Raw Data Processing ------------------------------------------------
+# ## Priority Groups =============================================================
+# referrals_merged <- referrals_merged %>%
+#   mutate(createdWeek = floor_date(as.Date(StartInstant, "%Y-%m-%d"), unit="week", week_start = 7),
+#          createdYear = format(as.Date(StartInstant, "%Y-%m-%d"),"%Y"),
+#          createdMonNum = as.numeric(format(as.Date(StartInstant, "%Y-%m-%d"),"%m")),
+#          createdMonth = format(as.Date(StartInstant, "%Y-%m-%d"),"%B"),
+#          createdMonthYear = format(as.Date(StartInstant, "%Y-%m-%d"),"%m-%Y")) %>%
+#   mutate(priority_type = case_when(str_detect(toupper(Priority), "CONVENIENCE") ~ "Patient Convenience"
+#                                    ,str_detect(toupper(Priority), "2 DAYS") ~ "Within 2 Days"
+#                                    ,str_detect(toupper(Priority), "1 WEEK") ~ "Within 1 Week"
+#                                    ,str_detect(toupper(Priority), "2 WEEKS") ~ "Within 2 Weeks"
+#                                    ,str_detect(toupper(Priority), "3-6 Days") ~ "Within 1 Week" # Question: Should this be a separate category?
+#                                    ,str_detect(toupper(Priority), "7-14 Days") ~ "Within 2 Weeks"
+#                                    ,Priority == "Routine" ~ "Routine"
+#                                    ,TRUE ~ "Not Specified"))
 
 ```
 
 
 ```{r Unique Referral Volume Data, echo = FALSE, warning = FALSE, message = FALSE}
 
-# Unique Referrals by Appointment Status -------------------------------------------------------
-referrals_processed <- referrals_merged %>%
-  group_by(ReferralKey) %>%
-  mutate(ApptStatusFinal = NA) %>%
-  mutate(ApptStatusFinal = case_when((is.na(ApptStatusFinal) & any(AppointmentStatus %in% c("Arrived","Completed"))) ~ "Arrived"
-                                     ,(is.na(ApptStatusFinal) & any(AppointmentStatus %in% c("No Show", "Left without seen"))) ~ "No Show"
-                                     ,(is.na(ApptStatusFinal) & any(AppointmentStatus == "Canceled")) ~ "Canceled"
-                                     ,(is.na(ApptStatusFinal) & any(AppointmentStatus %in% c("Scheduled","Confirmed"))) ~ "Scheduled"
-                                     ,TRUE ~ "Pending"))
-
-
-# Unique Referral Volume by Appointment Status -------------------------------------------------
-referral_vol <- referrals_processed %>%
-  group_by(SentBySite, SentByDepID, SentByDept, SentBySpecialty,
-           ReceivedBySite, ReceivedByDepID, ReceivedByDept, ReceivedBySpecialty, ReferredToDepartmentSpecialty,
-           StartInstant, createdYear, createdMonthYear, createdMonNum, createdMonth, createdWeek, ReferralKey, ReferralEpicId, priority_type, ApptStatusFinal,
-           Class, WasPatientContactedWithin12Hours_X, CreationToFirstEncounterDate, ExpirationInstant,
-           ProfessionalChargeEstimate, HospitalChargeEstimate, Redirected, Rejected, TriageRejectionReason, InAnyWorkqueue,
-           Patient_MRN, ICD_10_Chosen,
-           Status, CloseReason, SchedulingStatus) %>%
-  summarise(total = n()) %>%
-  mutate(SentBySpecialty = case_when(SentByDept %in% c("MS EPICCARE LINK","MS RYAN CENTER LINK") ~ "ECL"
-                                # ,str_detect(toupper(SentByDept), "EMERGENCY") ~ "ED"
-                                # ,SentByDept == "EMERGENCY DEPARTMENT PSYCH" ~ "ED Psych"
-                                # ,SentByDept == "CPEP PSYCH ED BI" ~ "ED Psych"
-                                , TRUE ~ SentBySpecialty)) %>%
-  mutate(SentBySite = case_when(SentByDept %in% c("MS EPICCARE LINK","MS RYAN CENTER LINK") ~ "ECL"
-                                     # ,SentByDept == "EMERGENCY DEPT BI" ~ "MSBI"
-                                     # ,SentByDept == "EMERGENCY DEPT MORNINGSIDE" ~ "MSM"
-                                     # ,SentByDept == "EMERGENCY DEPT WEST" ~ "MSW"
-                                     # ,SentByDept == "EMERGENCY DEPARTMENT" ~ "MSH"
-                                     # ,SentByDept == "EMERGENCY DEPT QUEENS" ~ "MSQ"
-                                     # ,SentByDept == "EMERGENCY DEPT BI BROOKLYN" ~ "MSB"
-                                     # ,SentByDept == "EMERGENCY DEPARTMENT PSYCH" ~ "MSH"
-                                     # ,SentByDept == "CPEP PSYCH ED BI" ~ "MSBI"
-                                     ,TRUE ~ SentBySite))
-
-referral_vol$referral_age <- difftime(report_run_date, as.Date(referral_vol$StartInstant, "%Y-%m%-%d"), units = "days")
+# # Unique Referrals by Appointment Status -------------------------------------------------------
+# referrals_processed <- referrals_merged %>%
+#   group_by(ReferralKey) %>%
+#   mutate(ApptStatusFinal = NA) %>%
+#   mutate(ApptStatusFinal = case_when((is.na(ApptStatusFinal) & any(AppointmentStatus %in% c("Arrived","Completed"))) ~ "Arrived"
+#                                      ,(is.na(ApptStatusFinal) & any(AppointmentStatus %in% c("No Show", "Left without seen"))) ~ "No Show"
+#                                      ,(is.na(ApptStatusFinal) & any(AppointmentStatus == "Canceled")) ~ "Canceled"
+#                                      ,(is.na(ApptStatusFinal) & any(AppointmentStatus %in% c("Scheduled","Confirmed"))) ~ "Scheduled"
+#                                      ,TRUE ~ "Pending"))
+# 
+# 
+# # Unique Referral Volume by Appointment Status -------------------------------------------------
+# referral_vol <- referrals_processed %>%
+#   group_by(SentBySite, SentByDepID, SentByDept, SentBySpecialty,
+#            ReceivedBySite, ReceivedByDepID, ReceivedByDept, ReceivedBySpecialty, ReferredToDepartmentSpecialty,
+#            StartInstant, createdYear, createdMonthYear, createdMonNum, createdMonth, createdWeek, ReferralKey, ReferralEpicId, priority_type, ApptStatusFinal,
+#            Class, WasPatientContactedWithin12Hours_X, CreationToFirstEncounterDate, ExpirationInstant,
+#            ProfessionalChargeEstimate, HospitalChargeEstimate, Redirected, Rejected, TriageRejectionReason, InAnyWorkqueue,
+#            Patient_MRN, ICD_10_Chosen,
+#            Status, CloseReason, SchedulingStatus) %>%
+#   summarise(total = n()) %>%
+#   mutate(SentBySpecialty = case_when(SentByDept %in% c("MS EPICCARE LINK","MS RYAN CENTER LINK") ~ "ECL"
+#                                 # ,str_detect(toupper(SentByDept), "EMERGENCY") ~ "ED"
+#                                 # ,SentByDept == "EMERGENCY DEPARTMENT PSYCH" ~ "ED Psych"
+#                                 # ,SentByDept == "CPEP PSYCH ED BI" ~ "ED Psych"
+#                                 , TRUE ~ SentBySpecialty)) %>%
+#   mutate(SentBySite = case_when(SentByDept %in% c("MS EPICCARE LINK","MS RYAN CENTER LINK") ~ "ECL"
+#                                      # ,SentByDept == "EMERGENCY DEPT BI" ~ "MSBI"
+#                                      # ,SentByDept == "EMERGENCY DEPT MORNINGSIDE" ~ "MSM"
+#                                      # ,SentByDept == "EMERGENCY DEPT WEST" ~ "MSW"
+#                                      # ,SentByDept == "EMERGENCY DEPARTMENT" ~ "MSH"
+#                                      # ,SentByDept == "EMERGENCY DEPT QUEENS" ~ "MSQ"
+#                                      # ,SentByDept == "EMERGENCY DEPT BI BROOKLYN" ~ "MSB"
+#                                      # ,SentByDept == "EMERGENCY DEPARTMENT PSYCH" ~ "MSH"
+#                                      # ,SentByDept == "CPEP PSYCH ED BI" ~ "MSBI"
+#                                      ,TRUE ~ SentBySite))
+# 
+# referral_vol$referral_age <- difftime(report_run_date, as.Date(referral_vol$StartInstant, "%Y-%m%-%d"), units = "days")
   
 ```
 
@@ -774,7 +780,7 @@ received_vol_site_ytd <- function(site){
   referral_vol_site_data <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(ReceivedBySite %in% site) %>%
+    filter(ReceivedBySite == site) %>%
     filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
     group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>%
     summarise(total_vol = n()) %>%
@@ -808,6 +814,114 @@ received_vol_site_ytd <- function(site){
   }
 
 ```
+
+
+```{r Last Month Referrals Volume Received, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+# MSHS Current and Last Year ----------------------------------------------------
+referral_vol_site_data_mshs_month <- function(monthYear, yearMonth){
+  
+  mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP", 
+                  "MSM", "MSUS", "MSW", "Network", "Oncology")
+  
+  # Referrals Data 
+  referral_vol_site_data_month_mshs <- referral_vol %>%
+    filter(ReceivedByDept != "*Unspecified") %>%
+    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+    filter(ReceivedBySite %in% mshs_sites) %>%
+    filter(createdMonthYear == monthYear) %>%
+    group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>%
+    summarise(total_vol = n()) %>%
+    pivot_wider(names_from = ApptStatusFinal,
+                values_from = total_vol,
+                values_fill = 0) 
+  
+  referral_vol_site_data_month_mshs <- referral_vol_site_data_month_mshs %>%
+    mutate(Total = sum(across(where(is.numeric)))) %>%
+    adorn_totals("row", name = "MSHS Total") %>%
+    mutate(conversion_rate = round((Total - Pending)/Total,2),
+           completion_rate = round(Arrived/Total,2)) %>%
+    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate)
+  
+  
+  
+  # Scheduling Data Filtered to Full Month 
+  volume_site_specialty_dept_month <- volume_site_specialty_dept_trend %>% filter(Appt.MonthYear == yearMonth)
+  waitTime_site_specialty_dept_trend_month <- waitTime_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth)
+  new_access_site_specialty_dept_month <- new_access_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth)
+  
+  # Volume Last 3 Months
+  referral_vol_site_data_month_mshs$total_vol <- volume_site_specialty_dept_month$total[match(referral_vol_site_data_month_mshs$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
+  
+  # New PT Volume Last 3 Months
+  referral_vol_site_data_month_mshs$new_pts <- volume_site_specialty_dept_month$new_perc[match(referral_vol_site_data_month_mshs$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
+  
+  # Median New Wait Time Last 3 Months
+  referral_vol_site_data_month_mshs$new_access <- waitTime_site_specialty_dept_trend_month$med_wait[match(referral_vol_site_data_month_mshs$ReceivedByDepID, waitTime_site_specialty_dept_trend_month$DepartmentId)]
+  
+  # New Patients Scheduled Last 3 Months
+  referral_vol_site_data_month_mshs$new_14access_perc <- new_access_site_specialty_dept_month$perc_14days[match(referral_vol_site_data_month_mshs$ReceivedByDepID, new_access_site_specialty_dept_month$DepartmentId)]
+  
+  referral_vol_site_data_month_mshs$ReceivedByDepID <- NULL
+  
+  return(referral_vol_site_data_month_mshs)
+  
+}
+  
+
+# Site Breakdown Function Last and Current Year --------------------------------
+received_vol_site_month <- function(site, monthYear, yearMonth){
+  
+  # site <- "MSUS"
+  # monthYear <- "12-2022"
+  # yearMonth <- "2022-12"
+  
+  # Referrals Data 
+  referral_vol_site_data_month <- referral_vol %>%
+    filter(ReceivedByDept != "*Unspecified") %>%
+    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+    filter(ReceivedBySite == site) %>%
+    filter(createdMonthYear == full_monthYear) %>%
+    group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>%
+    summarise(total_vol = n()) %>%
+    pivot_wider(names_from = ApptStatusFinal,
+                values_from = total_vol,
+                values_fill = 0) 
+  
+  referral_vol_site_data_month <- referral_vol_site_data_month %>%
+    mutate(Total = sum(across(where(is.numeric)))) %>%
+    adorn_totals("row", name = paste(site, "Total")) %>%
+    mutate(conversion_rate = round((Total - Pending)/Total,2),
+           completion_rate = round(Arrived/Total,2)) %>%
+    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate)
+  
+  
+  
+  # Scheduling Data Filtered to Full/Current Month 
+  volume_site_specialty_dept_month <- volume_site_specialty_dept_trend %>% filter(Appt.MonthYear == yearMonth)
+  waitTime_site_specialty_dept_trend_month <- waitTime_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth)
+  new_access_site_specialty_dept_month <- new_access_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth)
+  
+  
+  # Volume Last 3 Months
+  referral_vol_site_data_month$total_vol <- volume_site_specialty_dept_month$total[match(referral_vol_site_data_month$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
+  
+  # New PT Volume Last 3 Months
+  referral_vol_site_data_month$new_pts <- volume_site_specialty_dept_month$new_perc[match(referral_vol_site_data_month$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
+  
+  # Median New Wait Time Last 3 Months
+  referral_vol_site_data_month$new_access <- waitTime_site_specialty_dept_trend_month$med_wait[match(referral_vol_site_data_month$ReceivedByDepID, waitTime_site_specialty_dept_trend_month$DepartmentId)]
+  
+  # New Patients Scheduled Last 3 Months
+  referral_vol_site_data_month$new_14access_perc <- new_access_site_specialty_dept_month$perc_14days[match(referral_vol_site_data_month$ReceivedByDepID, new_access_site_specialty_dept_month$DepartmentId)]
+  
+  referral_vol_site_data_month$ReceivedByDepID <- NULL
+  
+  return(referral_vol_site_data_month)
+  }
+
+```
+
 
 # Ambulatory Referrals Summary
 *Report Run Date: `r report_run_date`*<br/>
@@ -1044,6 +1158,465 @@ reactable(
 <br/>
 <br/>
 
+
+### `r full_monthYear_label`
+```{r MSHS Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  referral_vol_site_data_mshs_month(full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r MSHS Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  referral_vol_site_data_mshs_month(current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
 ## MSBI {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
 ```{r MSBI Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
@@ -1055,7 +1628,7 @@ htmltools::browsable(
     ),
 
 reactable(
-  received_vol_site_ytd(c("MSBI")),
+  received_vol_site_ytd("MSBI"),
   elementId = "referrals-expansion-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -1274,6 +1847,463 @@ reactable(
 <br/>
 
 
+### `r full_monthYear_label`
+```{r MSBI Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSBI", full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r MSBI Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSBI", current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
 
 ## MSDMG {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
@@ -1286,7 +2316,7 @@ htmltools::browsable(
     ),
 
 reactable(
-  received_vol_site_ytd(c("MSDMG")),
+  received_vol_site_ytd("MSDMG"),
   elementId = "referrals-expansion-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -1315,6 +2345,464 @@ reactable(
     colGroup(name = paste0("Referrals Received from Sep 2022 - ",reporting_year, " YTD"), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
              headerStyle = list(color = "#212070", fontSize = "15px")),
     colGroup(name = "Visits Arrived/Scheduled in the Last 3 Months", columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r full_monthYear_label`
+```{r MSDMG Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSDMG", full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r MSDMG Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSDMG", current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
               headerStyle = list(color = "#00aeef", fontSize = "15px"))
     ),
   
@@ -1516,7 +3004,7 @@ htmltools::browsable(
     ),
 
 reactable(
-  received_vol_site_ytd(c("MSH- Ambulatory Care")),
+  received_vol_site_ytd("MSH- Ambulatory Care"),
   elementId = "referrals-expansion-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -1545,6 +3033,464 @@ reactable(
     colGroup(name = paste0("Referrals Received from Sep 2022 - ",reporting_year, " YTD"), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
              headerStyle = list(color = "#212070", fontSize = "15px")),
     colGroup(name = "Visits Arrived/Scheduled in the Last 3 Months", columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r full_monthYear_label`
+```{r MSH- Ambulatory Care Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSH- Ambulatory Care", full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r MSH- Ambulatory Care Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSH- Ambulatory Care", current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
               headerStyle = list(color = "#00aeef", fontSize = "15px"))
     ),
   
@@ -1746,7 +3692,7 @@ htmltools::browsable(
     ),
 
 reactable(
-  received_vol_site_ytd(c("MSH-MSDFP")),
+  received_vol_site_ytd("MSH-MSDFP"),
   elementId = "referrals-expansion-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -1775,6 +3721,464 @@ reactable(
     colGroup(name = paste0("Referrals Received from Sep 2022 - ",reporting_year, " YTD"), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
              headerStyle = list(color = "#212070", fontSize = "15px")),
     colGroup(name = "Visits Arrived/Scheduled in the Last 3 Months", columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r full_monthYear_label`
+```{r MSH-MSDFP Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSH-MSDFP", full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r MSH-MSDFP Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSH-MSDFP", current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
               headerStyle = list(color = "#00aeef", fontSize = "15px"))
     ),
   
@@ -1976,7 +4380,7 @@ htmltools::browsable(
     ),
 
 reactable(
-  received_vol_site_ytd(c("MSM")),
+  received_vol_site_ytd("MSM"),
   elementId = "referrals-expansion-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -2005,6 +4409,464 @@ reactable(
     colGroup(name = paste0("Referrals Received from Sep 2022 - ",reporting_year, " YTD"), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
              headerStyle = list(color = "#212070", fontSize = "15px")),
     colGroup(name = "Visits Arrived/Scheduled in the Last 3 Months", columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r full_monthYear_label`
+```{r MSM Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSM", full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r MSM Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSM", current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
               headerStyle = list(color = "#00aeef", fontSize = "15px"))
     ),
   
@@ -2206,7 +5068,7 @@ htmltools::browsable(
     ),
 
 reactable(
-  received_vol_site_ytd(c("MSUS")),
+  received_vol_site_ytd("MSUS"),
   elementId = "referrals-expansion-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -2235,6 +5097,464 @@ reactable(
     colGroup(name = paste0("Referrals Received from Sep 2022 - ",reporting_year, " YTD"), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
              headerStyle = list(color = "#212070", fontSize = "15px")),
     colGroup(name = "Visits Arrived/Scheduled in the Last 3 Months", columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r full_monthYear_label`
+```{r MSUS Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSUS", full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r MSUS Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSUS", current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
               headerStyle = list(color = "#00aeef", fontSize = "15px"))
     ),
   
@@ -2436,7 +5756,7 @@ htmltools::browsable(
     ),
 
 reactable(
-  received_vol_site_ytd(c("MSW")),
+  received_vol_site_ytd("MSW"),
   elementId = "referrals-expansion-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -2649,6 +5969,464 @@ reactable(
 
  )
 )
+```
+<br/>
+<br/>
+
+
+### `r full_monthYear_label`
+```{r MSW Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSW", full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r MSW Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("MSW", current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
 ```
 <br/>
 <br/>
@@ -2665,7 +6443,7 @@ htmltools::browsable(
     ),
 
 reactable(
-  received_vol_site_ytd(c("Network")),
+  received_vol_site_ytd("Network"),
   elementId = "referrals-expansion-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -2881,6 +6659,465 @@ reactable(
 ```
 <br/>
 <br/>
+
+
+### `r full_monthYear_label`
+```{r Network Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("Network", full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r Network Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("Network", current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
 
 
 ## Oncology {.tabset .tabset-fade .tabset-pills}
@@ -2894,7 +7131,7 @@ htmltools::browsable(
     ),
 
 reactable(
-  received_vol_site_ytd(c("Oncology")),
+  received_vol_site_ytd("Oncology"),
   elementId = "referrals-expansion-table",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
@@ -3111,4 +7348,463 @@ reactable(
 ```
 <br/>
 <br/>
+
+
+### `r full_monthYear_label`
+```{r Oncology Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("Oncology", full_monthYear, full_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", full_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", full_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
+
+### `r current_monthYear_label` MTD
+```{r Oncology Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+htmltools::browsable(
+  tagList(
+    tags$button(
+      "Expand/collapse all",
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table')"
+    ),
+
+reactable(
+  received_vol_site_month("Oncology", current_monthYear, current_yearMonth),
+  elementId = "referrals-expansion-table",
+  style = list(fontFamily = 'Calibri',
+                 fontSize = '14px'),
+    defaultColDef = colDef(align = "left", 
+                           headerStyle = list(fontWeight = "Bold", fontSize = "14px"),
+                           headerClass = "bar-sort-header"),
+  # RowStyle = function(index) {
+  #           if (index %in% c(nrow(referral_vol_site_data_mshs))) {
+  #             list(`border-top` = "2px solid rgb(184,184,184)",
+  #                  fontWeight = "Bold")
+  #           }
+  #         },
+    highlight = TRUE,
+    # filterable = TRUE,
+    pagination = FALSE,
+    # height = 800,
+    wrap = TRUE,
+  searchable = TRUE,
+  
+  groupBy = "ReferredToDepartmentSpecialty",
+  
+  columnGroups = list(
+    colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
+             headerStyle = list(color = "black", fontSize = "15px"),
+             sticky = "left"),
+    colGroup(name = paste0("Referrals Received in ", current_monthYear_label), columns = c("Total", "Arrived", "Pending", "conversion_rate", "completion_rate"),
+             headerStyle = list(color = "#212070", fontSize = "15px")),
+    colGroup(name = paste0("Visits Arrived/Scheduled in ", current_monthYear_label), columns = c("total_vol", "new_pts", "new_access", "new_14access_perc"),
+              headerStyle = list(color = "#00aeef", fontSize = "15px"))
+    ),
+  
+  columns = list(
+    
+    ReferredToDepartmentSpecialty = colDef(
+      # footer = "Total",
+      name = "Specialty (# of Departments)",
+      minWidth = 150),
+    
+    ReceivedByDept = colDef(
+      name = "Department",
+      minWidth = 200),
+    
+    Total = colDef(
+      name = "Total Referrals Received",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    Arrived = colDef(
+      name = "Referrals with Completed Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0).toLocaleString()
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0)
+    ),
+    
+    Pending = colDef(
+      name = "Referrals without Scheduled Appointments",
+      maxWidth = 120,
+      headerStyle = list(background = "#212070", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderRight = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    conversion_rate = colDef(
+      name = "Conversion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalPending = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalPending += row['Pending']
+        })
+        return (totalTotal - totalPending) / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['conversion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    completion_rate = colDef(
+      name = "Completion Rate",
+      maxWidth = 100,
+      headerStyle = list(background = "#d80b8c", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # Calculate the aggregate conversion rate as `(total-pending) / total`
+      aggregate = JS("function(values, rows) {
+        let totalArrived = 0
+        let totalTotal = 0
+        rows.forEach(function(row) {
+          totalTotal += row['Total']
+          totalArrived += row['Arrived']
+        })
+        return totalArrived / totalTotal
+      }"),
+      style = JS("function(rowInfo) {
+        var value = rowInfo.row['completion_rate']
+        if (value > 0.5) {
+          var color = '#008000'
+        } else if (value <= 0.5 ) {
+          var color = '#e00000'
+        } else {
+          var color = '#000000'
+        }
+        return { color: color, fontFamily: 'calibri', fontWeight: 'bold'}
+      }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    total_vol = colDef(
+      name = "Total Volume",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0),
+      style = list(borderLeft = "1.5px solid rgb(230, 230, 230)")
+    ),
+    
+    new_pts = colDef(
+      name = "% New Visits",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    ),
+    
+    new_access = colDef(
+      name = "Median New Wait Time",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(separators = TRUE, digits = 0, suffix = " days")
+    ),
+    
+    new_14access_perc = colDef(
+      name = "% New Patients Scheduled <14 Days",
+      maxWidth = 120,
+      headerStyle = list(background = "#00aeef", color = "white", fontWeight = "Bold", fontSize = "14px"),
+      # aggregate = "sum",
+      # footer = JS("function(column, state) {
+      #   let total = 0
+      #   state.sortedData.forEach(function(row) {
+      #     total += row[column.id]
+      #   })
+      #   return total.toFixed(0)
+      # }"),
+      format = colFormat(percent = TRUE, digits = 0)
+    )
+    
+  ) # Close Columns
+  
+  ) # Close Reactable
+
+ )
+)
+
+```
+<br/>
+<br/>
+
 
