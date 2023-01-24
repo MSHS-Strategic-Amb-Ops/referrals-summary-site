@@ -776,6 +776,12 @@ mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",
                 values_from = total_vol,
                 values_fill = 0) 
   
+  # referral_vol_urgent_site_data_mshs <- referral_vol_site_data_mshs %>%
+  #   filter(ApptStatusFinal == "Pending") %>%
+  #   filter(priority_type == "Within 2 Days") %>%
+  #   group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID) %>%
+  #   summarise(urgent_vol = n())
+  
   referral_vol_site_data_mshs <- referral_vol_site_data_mshs %>%
     mutate(Total = sum(across(where(is.numeric)))) %>%
     adorn_totals("row", name = "MSHS Total") %>%
@@ -783,6 +789,11 @@ mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",
            completion_rate = round(Arrived/Total,2)) %>%
     dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate)
   
+  # referral_vol_site_data_mshs$urgent_vol <- referral_vol_urgent_site_data_mshs$urgent_vol[match(referral_vol_site_data_mshs$ReceivedByDepID, referral_vol_urgent_site_data_mshs$ReceivedByDepID)]
+  # 
+  # referral_vol_site_data_mshs <- referral_vol_site_data_mshs %>%  
+  #   dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, urgent_vol, conversion_rate, completion_rate)
+  # 
   
   # Volume Last 3 Months
   referral_vol_site_data_mshs$total_vol <- volume_site_specialty_dept_180days$total[match(referral_vol_site_data_mshs$ReceivedByDepID, volume_site_specialty_dept_180days$DepartmentId)]
@@ -964,7 +975,7 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-mshs-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-mshs')"
     ),
 
 reactable(
@@ -1193,12 +1204,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-mshs-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-mshs-last')"
     ),
 
 reactable(
   referral_vol_site_data_mshs_month(full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-mshs-2",
+  elementId = "referrals-expansion-table-mshs-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left", 
@@ -1422,12 +1433,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-mshs-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-mshs-current')"
     ),
 
 reactable(
   referral_vol_site_data_mshs_month(current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-mshs-3",
+  elementId = "referrals-expansion-table-mshs-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left", 
@@ -1646,7 +1657,7 @@ reactable(
 
 
 ## MSBI {.tabset .tabset-fade .tabset-pills}
-### MSBI Sep 2022-`r reporting_year` YTD
+### Sep 2022-`r reporting_year` YTD
 ```{r MSBI Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
@@ -1875,18 +1886,18 @@ reactable(
 <br/>
 
 
-### MSBI `r full_monthYear_label`
+### `r full_monthYear_label`
 ```{r MSBI Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msbi-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msbi-last')"
     ),
 
 reactable(
   received_vol_site_month("MSBI", full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-msbi-2",
+  elementId = "referrals-expansion-table-msbi-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -2104,18 +2115,18 @@ reactable(
 <br/>
 
 
-### MSBI `r current_monthYear_label` MTD
+### `r current_monthYear_label` MTD
 ```{r MSBI Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msbi-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msbi-current')"
     ),
 
 reactable(
   received_vol_site_month("MSBI", current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-msbi-3",
+  elementId = "referrals-expansion-table-msbi-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -2340,12 +2351,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msdmg-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msdmg')"
     ),
 
 reactable(
   received_vol_site_ytd("MSDMG"),
-  elementId = "referrals-expansion-table-msdmg-1",
+  elementId = "referrals-expansion-table-msdmg",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -2569,12 +2580,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msdmg-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msdmg-last')"
     ),
 
 reactable(
   received_vol_site_month("MSDMG", full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-msdmg-2",
+  elementId = "referrals-expansion-table-msdmg-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -2798,12 +2809,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msdmg-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msdmg-current')"
     ),
 
 reactable(
   received_vol_site_month("MSDMG", current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-msdmg-3",
+  elementId = "referrals-expansion-table-msdmg-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -3028,12 +3039,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-amb-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-amb')"
     ),
 
 reactable(
   received_vol_site_ytd("MSH- Ambulatory Care"),
-  elementId = "referrals-expansion-table-msh-amb-1",
+  elementId = "referrals-expansion-table-msh-amb",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -3257,12 +3268,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-amb-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-amb-last')"
     ),
 
 reactable(
   received_vol_site_month("MSH- Ambulatory Care", full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-msh-amb-2",
+  elementId = "referrals-expansion-table-msh-amb-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -3486,12 +3497,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-amb-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-amb-current')"
     ),
 
 reactable(
   received_vol_site_month("MSH- Ambulatory Care", current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-msh-amb-3",
+  elementId = "referrals-expansion-table-msh-amb-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -3716,12 +3727,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-msdfp-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-msdfp')"
     ),
 
 reactable(
   received_vol_site_ytd("MSH-MSDFP"),
-  elementId = "referrals-expansion-table-msh-msdfp-1",
+  elementId = "referrals-expansion-table-msh-msdfp",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -3945,12 +3956,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-msdfp-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-msdfp-last')"
     ),
 
 reactable(
   received_vol_site_month("MSH-MSDFP", full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-msh-msdfp-2",
+  elementId = "referrals-expansion-table-msh-msdfp-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -4174,12 +4185,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-msdfp-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msh-msdfp-current')"
     ),
 
 reactable(
   received_vol_site_month("MSH-MSDFP", current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-msh-msdfp-3",
+  elementId = "referrals-expansion-table-msh-msdfp-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -4404,12 +4415,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msm-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msm')"
     ),
 
 reactable(
   received_vol_site_ytd("MSM"),
-  elementId = "referrals-expansion-table-msm-1",
+  elementId = "referrals-expansion-table-msm",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -4633,12 +4644,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msm-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msm-last')"
     ),
 
 reactable(
   received_vol_site_month("MSM", full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-msm-2",
+  elementId = "referrals-expansion-table-msm-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -4862,12 +4873,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msm-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msm-current')"
     ),
 
 reactable(
   received_vol_site_month("MSM", current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-msm-3",
+  elementId = "referrals-expansion-table-msm-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -5092,12 +5103,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msus-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msus')"
     ),
 
 reactable(
   received_vol_site_ytd("MSUS"),
-  elementId = "referrals-expansion-table-msus-1",
+  elementId = "referrals-expansion-table-msus",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -5321,12 +5332,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msus-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msus-last')"
     ),
 
 reactable(
   received_vol_site_month("MSUS", full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-msus-2",
+  elementId = "referrals-expansion-table-msus-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -5550,12 +5561,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msus-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msus-current')"
     ),
 
 reactable(
   received_vol_site_month("MSUS", current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-msus-3",
+  elementId = "referrals-expansion-table-msus-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -5780,12 +5791,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msw-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msw')"
     ),
 
 reactable(
   received_vol_site_ytd("MSW"),
-  elementId = "referrals-expansion-table-msw-1",
+  elementId = "referrals-expansion-table-msw",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -6008,12 +6019,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msw-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msw-last')"
     ),
 
 reactable(
   received_vol_site_month("MSW", full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-msw-2",
+  elementId = "referrals-expansion-table-msw-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -6237,12 +6248,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msw-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msw-current')"
     ),
 
 reactable(
   received_vol_site_month("MSW", current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-msw-3",
+  elementId = "referrals-expansion-table-msw-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -6467,12 +6478,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-network-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-network')"
     ),
 
 reactable(
   received_vol_site_ytd("Network"),
-  elementId = "referrals-expansion-table-network-1",
+  elementId = "referrals-expansion-table-network",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -6695,12 +6706,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-network-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-network-last')"
     ),
 
 reactable(
   received_vol_site_month("Network", full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-network-2",
+  elementId = "referrals-expansion-table-network-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -6924,12 +6935,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-network-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-network-current')"
     ),
 
 reactable(
   received_vol_site_month("Network", current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-network-3",
+  elementId = "referrals-expansion-table-network-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -7155,12 +7166,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-oncology-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-oncology')"
     ),
 
 reactable(
   received_vol_site_ytd("Oncology"),
-  elementId = "referrals-expansion-table-oncology-1",
+  elementId = "referrals-expansion-table-oncology",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -7384,12 +7395,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-oncology-2')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-oncology-last')"
     ),
 
 reactable(
   received_vol_site_month("Oncology", full_monthYear, full_yearMonth),
-  elementId = "referrals-expansion-table-oncology-2",
+  elementId = "referrals-expansion-table-oncology-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -7613,12 +7624,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-oncology-3')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-oncology-current')"
     ),
 
 reactable(
   received_vol_site_month("Oncology", current_monthYear, current_yearMonth),
-  elementId = "referrals-expansion-table-oncology-3",
+  elementId = "referrals-expansion-table-oncology-current",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
