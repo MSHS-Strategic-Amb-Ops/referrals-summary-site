@@ -911,16 +911,19 @@ referral_vol_site_data_mshs_month <- function(monthYear, yearMonth){
 # Site Breakdown Function Last and Current Year --------------------------------
 received_vol_site_month <- function(site, monthYear, yearMonth){
   
-  # site <- "MSUS"
-  # monthYear <- "12-2022"
-  # yearMonth <- "2022-12"
+  # site <- "MSBI"
+  # monthYear <- full_monthYear
+  # yearMonth <- full_yearMonth
+  # 
+  #  monthYear <- current_monthYear
+  # yearMonth <- current_yearMonth
   
   # Referrals Data 
   referral_vol_site_data_month <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
     filter(ReceivedBySite == site) %>%
-    filter(createdMonthYear == full_monthYear) %>%
+    filter(createdMonthYear == monthYear) %>%
     group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>%
     summarise(total_vol = n()) %>%
     pivot_wider(names_from = ApptStatusFinal,
