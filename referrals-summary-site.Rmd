@@ -458,10 +458,10 @@ current_monthYear_label <- format((lubridate::floor_date(max_appt_date, unit = "
 
 ```{r Import Processed Referrals Volume Data, echo = FALSE, warning = FALSE, message = FALSE}
 
-# path <- "/nfs/data/Applications/Ambulatory/Data_Updated/"
-# # saveRDS(referral_vol, paste0(path,"referral_vol.rds"))
-# 
-# referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
+path <- "/nfs/data/Applications/Ambulatory/Data_Updated/"
+# saveRDS(referral_vol, paste0(path,"referral_vol.rds"))
+
+referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 ```
 
 
