@@ -332,7 +332,7 @@ scheduling_data_raw <- as.data.frame(readRDS("/nfs/data/Applications/Ambulatory/
 #   mutate(Campus = ifelse(Campus == "MSDD", "MSDMG", Campus)) %>%
 #   filter(!is.na(Campus)) %>%
 #   filter(Campus %in% c("NETWORK","MSM","MSH-MSDFP","ONCOLOGY","MSW","MSBI","MSUS","MSH- AMBULATORY CARE","MSDMG"))
-#
+
 
 scheduling_data_raw <- scheduling_data_raw %>%
   mutate(New.PT2 = case_when(New.PT2 == "New" ~ 'New',TRUE ~ 'Established'),
@@ -462,12 +462,12 @@ volume_site_specialty_dept_trend <- scheduling_data_raw %>%
 # saveRDS(volume_site_specialty_dept_180days, "volume_site_specialty_dept_180days.rds")
 # saveRDS(volume_site_specialty_dept_trend, "volume_site_specialty_dept_trend.rds")
 
-# readRDS("waitTime_site_specialty_dept_180days.rds")
-# readRDS("waitTime_site_specialty_dept_trend.rds")
-# readRDS("new_access_site_specialty_dept_180days.rds")
-# readRDS("new_access_site_specialty_dept_trend.rds")
-# readRDS("volume_site_specialty_dept_180days.rds")
-# readRDS("volume_site_specialty_dept_trend.rds")
+# waitTime_site_specialty_dept_180days <- readRDS("waitTime_site_specialty_dept_180days.rds")
+# waitTime_site_specialty_dept_trend <- readRDS("waitTime_site_specialty_dept_trend.rds")
+# new_access_site_specialty_dept_180days <- readRDS("new_access_site_specialty_dept_180days.rds")
+# new_access_site_specialty_dept_trend <- readRDS("new_access_site_specialty_dept_trend.rds")
+# volume_site_specialty_dept_180days <- readRDS("volume_site_specialty_dept_180days.rds")
+# volume_site_specialty_dept_trend <- readRDS("volume_site_specialty_dept_trend.rds")
 
 rm(scheduling_data_raw)
 invisible(gc())
@@ -605,7 +605,7 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 # 
 # saveRDS(referral_vol, "referral_vol.rds")
 
-# readRDS("referral_vol.rds")
+# referral_vol <- readRDS("referral_vol.rds")
 ```
 
 
@@ -783,20 +783,16 @@ mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",
   #   summarise(urgent_vol = n())
   
   referral_vol_site_data_mshs <- referral_vol_site_data_mshs %>%
-    mutate(Total = sum(across(where(is.numeric)))) %>%
-    adorn_totals("row", name = "MSHS Total") %>%
-    mutate(conversion_rate = round((Total - Pending)/Total,2),
-           completion_rate = round(Arrived/Total,2)) %>%
-    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate)
-  
-  # referral_vol_site_data_mshs$urgent_vol <- referral_vol_urgent_site_data_mshs$urgent_vol[match(referral_vol_site_data_mshs$ReceivedByDepID, referral_vol_urgent_site_data_mshs$ReceivedByDepID)]
-  # 
-  # referral_vol_site_data_mshs <- referral_vol_site_data_mshs %>%  
-  #   dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, urgent_vol, conversion_rate, completion_rate)
-  # 
+    mutate(Total = sum(across(where(is.numeric)))) 
   
   # Volume Last 3 Months
   referral_vol_site_data_mshs$total_vol <- volume_site_specialty_dept_180days$total[match(referral_vol_site_data_mshs$ReceivedByDepID, volume_site_specialty_dept_180days$DepartmentId)]
+  
+  referral_vol_site_data_mshs <- referral_vol_site_data_mshs %>%
+    adorn_totals("row", name = "MSHS Total") %>%
+    mutate(conversion_rate = round((Total - Pending)/Total,2),
+           completion_rate = round(Arrived/Total,2)) %>%
+    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate, total_vol)
   
   # New PT Volume Last 3 Months
   referral_vol_site_data_mshs$new_pts <- volume_site_specialty_dept_180days$new_perc[match(referral_vol_site_data_mshs$ReceivedByDepID, volume_site_specialty_dept_180days$DepartmentId)]
@@ -828,15 +824,17 @@ received_vol_site_ytd <- function(site){
                 values_fill = 0) 
   
   referral_vol_site_data <- referral_vol_site_data %>%
-    mutate(Total = sum(across(where(is.numeric)))) %>%
-    adorn_totals("row", name = paste(site, "Total")) %>%
-    mutate(conversion_rate = round((Total - Pending)/Total,2),
-           completion_rate = round(Arrived/Total,2)) %>%
-    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate)
+    mutate(Total = sum(across(where(is.numeric)))) 
   
   
   # Volume Last 3 Months
   referral_vol_site_data$total_vol <- volume_site_specialty_dept_180days$total[match(referral_vol_site_data$ReceivedByDepID, volume_site_specialty_dept_180days$DepartmentId)]
+  
+  referral_vol_site_data <- referral_vol_site_data %>%
+    adorn_totals("row", name = paste(site, "Total")) %>%
+    mutate(conversion_rate = round((Total - Pending)/Total,2),
+           completion_rate = round(Arrived/Total,2)) %>%
+    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate, total_vol)
   
   # New PT Volume Last 3 Months
   referral_vol_site_data$new_pts <- volume_site_specialty_dept_180days$new_perc[match(referral_vol_site_data$ReceivedByDepID, volume_site_specialty_dept_180days$DepartmentId)]
@@ -876,14 +874,8 @@ referral_vol_site_data_mshs_month <- function(monthYear, yearMonth){
                 values_fill = 0) 
   
   referral_vol_site_data_month_mshs <- referral_vol_site_data_month_mshs %>%
-    mutate(Total = sum(across(where(is.numeric)))) %>%
-    adorn_totals("row", name = "MSHS Total") %>%
-    mutate(conversion_rate = round((Total - Pending)/Total,2),
-           completion_rate = round(Arrived/Total,2)) %>%
-    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate)
-  
-  
-  
+    mutate(Total = sum(across(where(is.numeric)))) 
+    
   # Scheduling Data Filtered to Full Month 
   volume_site_specialty_dept_month <- volume_site_specialty_dept_trend %>% filter(Appt.MonthYear == yearMonth)
   waitTime_site_specialty_dept_trend_month <- waitTime_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth)
@@ -891,6 +883,12 @@ referral_vol_site_data_mshs_month <- function(monthYear, yearMonth){
   
   # Volume Last 3 Months
   referral_vol_site_data_month_mshs$total_vol <- volume_site_specialty_dept_month$total[match(referral_vol_site_data_month_mshs$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
+  
+  referral_vol_site_data_month_mshs <- referral_vol_site_data_month_mshs %>%
+    adorn_totals("row", name = "MSHS Total") %>%
+    mutate(conversion_rate = round((Total - Pending)/Total,2),
+           completion_rate = round(Arrived/Total,2)) %>%
+    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate, total_vol)
   
   # New PT Volume Last 3 Months
   referral_vol_site_data_month_mshs$new_pts <- volume_site_specialty_dept_month$new_perc[match(referral_vol_site_data_month_mshs$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
@@ -931,12 +929,7 @@ received_vol_site_month <- function(site, monthYear, yearMonth){
                 values_fill = 0) 
   
   referral_vol_site_data_month <- referral_vol_site_data_month %>%
-    mutate(Total = sum(across(where(is.numeric)))) %>%
-    adorn_totals("row", name = paste(site, "Total")) %>%
-    mutate(conversion_rate = round((Total - Pending)/Total,2),
-           completion_rate = round(Arrived/Total,2)) %>%
-    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate)
-  
+    mutate(Total = sum(across(where(is.numeric)))) 
   
   
   # Scheduling Data Filtered to Full/Current Month 
@@ -947,6 +940,13 @@ received_vol_site_month <- function(site, monthYear, yearMonth){
   
   # Volume Last 3 Months
   referral_vol_site_data_month$total_vol <- volume_site_specialty_dept_month$total[match(referral_vol_site_data_month$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
+  
+  referral_vol_site_data_month <- referral_vol_site_data_month %>%
+    adorn_totals("row", name = paste(site, "Total")) %>%
+    mutate(conversion_rate = round((Total - Pending)/Total,2),
+           completion_rate = round(Arrived/Total,2)) %>%
+    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate, total_vol)
+  
   
   # New PT Volume Last 3 Months
   referral_vol_site_data_month$new_pts <- volume_site_specialty_dept_month$new_perc[match(referral_vol_site_data_month$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
