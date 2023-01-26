@@ -394,7 +394,6 @@ waitTime_site_specialty_dept_180days <- scheduling_data_raw %>%
   group_by(Campus.Specialty, Campus, Department, DepartmentId) %>%
   summarise(med_wait = as.numeric(median(Wait.Time, na.rm = TRUE)))
 
-
 waitTime_site_specialty_dept_trend <- scheduling_data_raw %>%
   filter(Wait.Time >= 0) %>%
   filter(New.PT2 == "New") %>%
@@ -469,9 +468,27 @@ volume_site_specialty_dept_trend <- scheduling_data_raw %>%
 # volume_site_specialty_dept_180days <- readRDS("volume_site_specialty_dept_180days.rds")
 # volume_site_specialty_dept_trend <- readRDS("volume_site_specialty_dept_trend.rds")
 
-rm(scheduling_data_raw)
-invisible(gc())
+
 ```
+
+
+```{r Scheduling Data Processing by Specialty, echo = FALSE, warning = FALSE, message = FALSE}
+
+# conn1 <- dbPool(drv = odbc(), dsn = "Caboodle", timeout = 30)
+# 
+# # Import Referrals+Visit Data --------------------------------------------------
+# referrals_conn <- tbl(conn1, "Referrals")
+# referrals_depts <- referrals_conn %>%
+#   mutate(StartInstant = as.Date(StartInstant)) %>%
+#   filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
+#   filter(Status != "Canceled") %>%
+#   group_by(ReceivedByDept, ReceivedByDepID) %>%
+#   summarise(total = n()) %>%
+#   collect() %>%
+#   dplyr::select(-total)
+
+```
+
 
 
 ```{r Import Processed Referrals Volume Data, echo = FALSE, warning = FALSE, message = FALSE}
@@ -483,6 +500,8 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 ```
 
 
+
+
 ```{r Referrals Data Importing, echo = FALSE, warning = FALSE, message = FALSE}
 
 # Connect to Database ----------------------------------------------------------
@@ -491,7 +510,6 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 # conn1 <- dbPool(drv = odbc(), dsn = "Caboodle", timeout = 30)
 # 
 # # Import Referrals+Visit Data --------------------------------------------------
-# # referrals_raw <- sqlQuery(conn1, "SELECT * FROM PRDREPORT.FullAccess.Referrals") # Master Referrals Data
 # referrals_conn <- tbl(conn1, "Referrals")
 # referrals_raw <- referrals_conn %>%
 #   mutate(StartInstant = as.Date(StartInstant)) %>%
@@ -504,6 +522,8 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 # referralFact_conn <- tbl(conn1, "ReferralFact")
 # 
 # referralFact_raw <- referralFact_conn %>%
+#   # head(1000) %>%
+#   # collect()
 #   mutate(StartInstant = as.Date(StartInstant)) %>%
 #   filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
 #   group_by(ReferralKey, ReferredToDepartmentSpecialty, StartInstant, `_CreationInstant`, `_LastUpdatedInstant`, LastEnteredWorkqueueDateKey_X,
@@ -522,13 +542,14 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 # #   filter(StartInstant == as.Date("2022-11-03")) %>%
 # #   collect()
 # 
-# # visitFact_conn <- tbl(conn1, "VisitFact")
-# # visitFact_raw <- visitFact_conn %>%
-# #   filter(AppointmentStatus == "Arrived") %>%
-# #   filter(!is.na(PaymenetDue)) %>%
-# #   head(10000) %>%
-# #   collect()
-# # referral_fact_all <- sqlQuery(conn1, "SELECT TOP 200 * FROM PRDREPORT.FullAccess.ReferralFact ORDER BY StartInstant")
+# visitFact_conn <- tbl(conn1, "VisitFact")
+# visitFact_raw <- visitFact_conn %>%
+#   filter(ReferralKey >0) %>%
+#   group_by(ReferralKey, AppointmentStatus, AppointmentCreationDateKey, AppointmentCancellationDateKey) %>%
+#   summarise(total = n()) %>%
+#   collect() %>%
+#   group_by(ReferralKey) %>%
+#   mutate(first_appt = as.Date(as.character(min(AppointmentCreationDateKey)),  format = "%Y%m%d"))
 # 
 # # Append Additional Referral Columns -------------------------------------------
 # referrals_merged <- left_join(referrals_raw, subset(referralFact_raw, select = -c(StartInstant, Priority)))
@@ -542,7 +563,7 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 ```{r Referrals Data Processing, echo = FALSE, warning = FALSE, message = FALSE}
 
 # Referrals Raw Data Processing ------------------------------------------------
-## Priority Groups =============================================================
+# Priority Groups =============================================================
 # referrals_merged <- referrals_merged %>%
 #   mutate(createdWeek = floor_date(as.Date(StartInstant, "%Y-%m-%d"), unit="week", week_start = 7),
 #          createdYear = format(as.Date(StartInstant, "%Y-%m-%d"),"%Y"),
@@ -563,7 +584,7 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 
 ```{r Unique Referral Volume Data, echo = FALSE, warning = FALSE, message = FALSE}
 
-# # Unique Referrals by Appointment Status -------------------------------------------------------
+# Unique Referrals by Appointment Status -------------------------------------------------------
 # referrals_processed <- referrals_merged %>%
 #   group_by(ReferralKey) %>%
 #   mutate(ApptStatusFinal = NA) %>%
@@ -603,8 +624,19 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 # referral_vol$referral_age <- difftime(report_run_date, as.Date(referral_vol$StartInstant, "%Y-%m%-%d"), units = "days")
 # 
 # 
-# saveRDS(referral_vol, "referral_vol.rds")
+# # Merge Appointment Scheduled Date 
+# referral_vol$first_appt_created <- visitFact_raw$first_appt[match(referral_vol$ReferralKey, visitFact_raw$ReferralKey)]
+# referral_vol <- referral_vol %>%
+#   mutate(scheduledWeek = floor_date(as.Date(first_appt_created, "%Y-%m-%d"), unit="week", week_start = 7),
+#          scheduledYear = format(as.Date(first_appt_created, "%Y-%m-%d"),"%Y"),
+#          scheduledMonNum = as.numeric(format(as.Date(first_appt_created, "%Y-%m-%d"),"%m")),
+#          scheduledMonth = format(as.Date(first_appt_created, "%Y-%m-%d"),"%B"),
+#          scheduledMonthYear = format(as.Date(first_appt_created, "%Y-%m-%d"),"%m-%Y"),
+#          scheduledYearMonth = format(as.Date(first_appt_created, "%Y-%m-%d"),"%Y-%m")) %>%
+#   mutate(leadDays = difftime(StartInstant, first_appt_created, units = "days")) 
 
+
+# saveRDS(referral_vol, "referral_vol.rds")
 # referral_vol <- readRDS("referral_vol.rds")
 ```
 
@@ -961,6 +993,130 @@ received_vol_site_month <- function(site, monthYear, yearMonth){
   
   return(referral_vol_site_data_month)
   }
+
+```
+
+
+```{r Referrals Receievd by Month, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+# MSHS -------------------------------------------------------------------------
+mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP", 
+                         "MSM", "MSUS", "MSW", "Network", "Oncology")
+
+
+  # Referrals Data by Month
+  referral_vol_specialty_data_mshs_trend <- referral_vol %>%
+    filter(ReceivedByDept != "*Unspecified") %>%
+    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+    filter(ReceivedBySite %in% mshs_sites) %>%
+    filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
+    group_by(ReferredToDepartmentSpecialty, createdMonthYear, ApptStatusFinal) %>%
+    summarise(total_vol = n()) %>%
+    pivot_wider(names_from = ApptStatusFinal,
+                values_from = total_vol,
+                values_fill = 0) 
+  
+  referral_vol_specialty_data_mshs_trend <- referral_vol_specialty_data_mshs_trend %>%
+    mutate(Total = sum(across(where(is.numeric)))) 
+  
+  referral_vol_specialty_data_mshs_trend <- referral_vol_specialty_data_mshs_trend %>%
+    group_by(createdMonthYear) %>%
+    mutate(ReferredToDepartmentSpecialty = paste0("MSHS ",ReferredToDepartmentSpecialty)) %>%
+    bind_rows(summarise(.,
+                      across(where(is.integer), sum),
+                      across(where(is.character), ~"*MSHS All Specialties"))) %>%
+    mutate(conversion_rate = round((Total - Pending)/Total,2)*100,
+           completion_rate = round(Arrived/Total,2)*100) %>%
+    dplyr::select(ReferredToDepartmentSpecialty, createdMonthYear, Total, Arrived,  Pending, conversion_rate, completion_rate)
+  
+  referral_vol_specialty_data_mshs_trend <- referral_vol_specialty_data_mshs_trend %>%
+    mutate(createdMonthYear = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m")) %>%
+    arrange(createdMonthYear) %>%
+    arrange(ReferredToDepartmentSpecialty) 
+  
+  
+  
+referral_vol_specialty_data_site_trend <- function(site){
+  
+  # site <- "MSUS"
+  # Referrals Data by Month
+  referral_vol_specialty_data_site_trend <- referral_vol %>%
+    filter(ReceivedByDept != "*Unspecified") %>%
+    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+    filter(ReceivedBySite %in% site) %>%
+    filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
+    group_by(ReferredToDepartmentSpecialty, createdMonthYear, ApptStatusFinal) %>%
+    summarise(total_vol = n()) %>%
+    pivot_wider(names_from = ApptStatusFinal,
+                values_from = total_vol,
+                values_fill = 0) 
+  
+  referral_vol_specialty_data_site_trend <- referral_vol_specialty_data_site_trend %>%
+    mutate(Total = sum(across(where(is.numeric)))) 
+  
+  referral_vol_specialty_data_site_trend <- referral_vol_specialty_data_site_trend %>%
+    group_by(createdMonthYear) %>%
+    mutate(ReferredToDepartmentSpecialty = paste0(site, " ", ReferredToDepartmentSpecialty)) %>%
+    bind_rows(summarise(.,
+                      across(where(is.integer), sum),
+                      across(where(is.character), ~ paste0("*",site, " All Specialties")))) %>%
+    mutate(conversion_rate = round((Total - Pending)/Total,2)*100,
+           completion_rate = round(Arrived/Total,2)*100) %>%
+    dplyr::select(ReferredToDepartmentSpecialty, createdMonthYear, Total, Arrived,  Pending, conversion_rate, completion_rate)
+  
+  referral_vol_specialty_data_site_trend <- referral_vol_specialty_data_site_trend %>%
+    mutate(createdMonthYear = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m")) %>%
+    arrange(createdMonthYear) %>%
+    arrange(ReferredToDepartmentSpecialty) 
+}
+  
+```
+
+
+```{r Referrals Lead Days to Scheduling by Month, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+# MSHS -------------------------------------------------------------------------
+mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP", 
+                         "MSM", "MSUS", "MSW", "Network", "Oncology")
+
+
+  # Referrals Data by Month
+  referral_received_specialty_data_mshs_trend <- referral_vol %>%
+    filter(ReceivedByDept != "*Unspecified") %>%
+    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+    filter(ReceivedBySite %in% mshs_sites) %>%
+    filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
+    group_by(ReferredToDepartmentSpecialty, createdMonthYear) %>%
+    summarise(total_received = n()) %>%
+    mutate(yearMonth = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m"))
+  
+  referral_scheduled_specialty_data_mshs_trend <- referral_vol %>%
+    filter(ReceivedByDept != "*Unspecified") %>%
+    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+    filter(ReceivedBySite %in% mshs_sites) %>%
+    filter(first_appt_created < report_run_date & first_appt_created >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
+    group_by(ReferredToDepartmentSpecialty, scheduledYearMonth) %>%
+    summarise(total_scheduled = n()) %>%
+    rename(yearMonth = scheduledYearMonth)
+  
+  referral_leadDays_specialty_data_mshs_trend <- referral_vol %>%
+    filter(ReceivedByDept != "*Unspecified") %>%
+    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+    filter(ReceivedBySite %in% mshs_sites) %>%
+    filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
+    group_by(ReferredToDepartmentSpecialty, scheduledYearMonth) %>%
+    summarise(leadDays= median(leadDays, na.rm = TRUE)) %>%
+    rename(yearMonth = scheduledYearMonth)
+  
+  
+  #put all data frames into list
+  df_list <- list(referral_received_specialty_data_mshs_trend,
+                  referral_scheduled_specialty_data_mshs_trend,
+                  referral_leadDays_specialty_data_mshs_trend)
+  
+  #merge all data frames together
+  referral_leadDays_specialty_data_mshs_trend_merged <- Reduce(function(x, y) merge(x, y, all=TRUE), df_list)  
+
 
 ```
 
@@ -1659,6 +1815,155 @@ reactable(
 <br/>
 
 
+### Trend
+```{r MSHS Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+map(unique(referral_vol_specialty_data_mshs_trend$ReferredToDepartmentSpecialty), function(x){
+highchart() %>%
+  hc_yAxis_multiples(
+    list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+    list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+           labels = list(format = '{value}%'),
+           showLastLabel = FALSE, opposite = TRUE)
+  ) %>%
+  hc_xAxis(title = list(text = ""),
+           categories = (referral_vol_specialty_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+           type = "datetime",
+           labels = list(format = '{value:%Y/%m}')
+           # dateTimeLabelFormats = list(month = '%Y-%m')
+           ) %>%
+  hc_add_series(name   = "Total Referrals Received",
+                data   = (referral_vol_specialty_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+                type = "column",
+                                zones = list(list(value = 0,
+                                  color = 'red')),
+                color='#a5a7a5',
+                marker = list(enabled= TRUE),
+                dataLabels = list(enabled = TRUE, format='{point.y}')
+                ) %>%
+  hc_add_series(name   = "Conversion Rate",
+                data   = (referral_vol_specialty_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x))$conversion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#00aeef',
+                lineWidth=3,
+                lineColor='#00aeef',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+   hc_add_series(name   = "Completion Rate",
+                data   = (referral_vol_specialty_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x))$completion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#d80b8c',
+                lineWidth=3,
+                lineColor='#d80b8c',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+  hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+    hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+    # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+    #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+    hc_tooltip(shared = TRUE, borderColor = "black")
+  }) %>%
+  hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+# map(unique(referral_vol_specialty_data_mshs_trend$ReferredToDepartmentSpecialty), function(x){
+# highchart() %>%
+#   hc_yAxis_multiples(
+#     list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+#     list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+#            labels = list(format = '{value}%'),
+#            showLastLabel = FALSE, opposite = TRUE)
+#   ) %>%
+#   hc_xAxis(title = list(text = ""),
+#            categories = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+#            type = "datetime",
+#            labels = list(format = '{value:%m/%d}')
+#            # dateTimeLabelFormats = list(month = '%Y-%m')
+#            ) %>%
+#   hc_add_series(name   = "Total Referrals Received",
+#                 data   = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+#                 type = "column",
+#                                 zones = list(list(value = 0,
+#                                   color = 'red')),
+#                 color='#a5a7a5',
+#                 marker = list(enabled= TRUE),
+#                 dataLabels = list(enabled = TRUE, format='{point.y}')
+#                 ) %>%
+#   hc_add_series(name   = "MSDMG",
+#                 data   = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x) %>% filter(ReceivedBySite == "MSDMG"))$conversion_rate,
+#                  marker = list(enabled= TRUE), yAxis = 1,
+#                 color='#d80b8c',
+#                 lineWidth=3,
+#                 lineColor='#d80b8c',
+#                 dataLabels = list(enabled = TRUE, format='{point.y}%')
+#                 ) %>%
+#   hc_add_series(name   = "MSH- Ambulatory Care",
+#                 data   = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x) %>% filter(ReceivedBySite == "MSH- Ambulatory Care"))$conversion_rate,
+#                  marker = list(enabled= TRUE), yAxis = 1,
+#                 color='#d80b8c',
+#                 lineWidth=3,
+#                 lineColor='#d80b8c',
+#                 dataLabels = list(enabled = TRUE, format='{point.y}%')
+#                 ) %>%
+#   hc_add_series(name   = "MSH-MSDFP",
+#                 data   = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x) %>% filter(ReceivedBySite == "MSH-MSDFP"))$conversion_rate,
+#                  marker = list(enabled= TRUE), yAxis = 1,
+#                 color='#d80b8c',
+#                 lineWidth=3,
+#                 lineColor='#d80b8c',
+#                 dataLabels = list(enabled = TRUE, format='{point.y}%')
+#                 ) %>%
+#   hc_add_series(name   = "MSM",
+#                 data   = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x) %>% filter(ReceivedBySite == "MSM"))$conversion_rate,
+#                  marker = list(enabled= TRUE), yAxis = 1,
+#                 color='#d80b8c',
+#                 lineWidth=3,
+#                 lineColor='#d80b8c',
+#                 dataLabels = list(enabled = TRUE, format='{point.y}%')
+#                 ) %>%
+#   hc_add_series(name   = "MSUS",
+#                 data   = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x) %>% filter(ReceivedBySite == "MSUS"))$conversion_rate,
+#                  marker = list(enabled= TRUE), yAxis = 1,
+#                 color='#d80b8c',
+#                 lineWidth=3,
+#                 lineColor='#d80b8c',
+#                 dataLabels = list(enabled = TRUE, format='{point.y}%')
+#                 ) %>%
+#   hc_add_series(name = "MSW",
+#                 data   = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x) %>% filter(ReceivedBySite == "MSW"))$conversion_rate,
+#                  marker = list(enabled= TRUE), yAxis = 1,
+#                 color='#d80b8c',
+#                 lineWidth=3,
+#                 lineColor='#d80b8c',
+#                 dataLabels = list(enabled = TRUE, format='{point.y}%')
+#                 ) %>%
+#   hc_add_series(name = "Network",
+#                 data = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x) %>% filter(ReceivedBySite == "Network"))$conversion_rate,
+#                  marker = list(enabled= TRUE), yAxis = 1,
+#                 color='#d80b8c',
+#                 lineWidth=3,
+#                 lineColor='#d80b8c',
+#                 dataLabels = list(enabled = TRUE, format='{point.y}%')
+#                 ) %>%
+#   hc_add_series(name = "Oncology",
+#                 data = (referral_vol_site_data_mshs_trend %>% filter(ReferredToDepartmentSpecialty == x) %>% filter(ReceivedBySite == "Oncology"))$conversion_rate,
+#                  marker = list(enabled= TRUE), yAxis = 1,
+#                 color='#d80b8c',
+#                 lineWidth=3,
+#                 lineColor='#d80b8c',
+#                 dataLabels = list(enabled = TRUE, format='{point.y}%')
+#                 ) %>%
+#   hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+#     hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+#     # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+#     #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+#     hc_tooltip(shared = TRUE, borderColor = "black")
+#   }) %>%
+#   hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+```
+
+
+
 ## MSBI {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
 ```{r MSBI Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
@@ -2347,6 +2652,61 @@ reactable(
 <br/>
 
 
+### Trend
+```{r MSBI Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+data <- referral_vol_specialty_data_site_trend("MSBI")
+
+map(unique(data$ReferredToDepartmentSpecialty), function(x){
+highchart() %>%
+  hc_yAxis_multiples(
+    list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+    list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+           labels = list(format = '{value}%'),
+           showLastLabel = FALSE, opposite = TRUE)
+  ) %>%
+  hc_xAxis(title = list(text = ""),
+           categories = (data %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+           type = "datetime",
+           labels = list(format = '{value:%Y/%m}')
+           # dateTimeLabelFormats = list(month = '%Y-%m')
+           ) %>%
+  hc_add_series(name   = "Total Referrals Received",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+                type = "column",
+                                zones = list(list(value = 0,
+                                  color = 'red')),
+                color='#a5a7a5',
+                marker = list(enabled= TRUE),
+                dataLabels = list(enabled = TRUE, format='{point.y}')
+                ) %>%
+  hc_add_series(name   = "Conversion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$conversion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#00aeef',
+                lineWidth=3,
+                lineColor='#00aeef',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+   hc_add_series(name   = "Completion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$completion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#d80b8c',
+                lineWidth=3,
+                lineColor='#d80b8c',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+  hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+    hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+    # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+    #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+    hc_tooltip(shared = TRUE, borderColor = "black")
+  }) %>%
+  hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+```
+
+
 ## MSDMG {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
 ```{r MSDMG Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
@@ -3033,6 +3393,60 @@ reactable(
 ```
 <br/>
 <br/>
+
+### Trend
+```{r MSDMG Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+data <- referral_vol_specialty_data_site_trend("MSDMG")
+
+map(unique(data$ReferredToDepartmentSpecialty), function(x){
+highchart() %>%
+  hc_yAxis_multiples(
+    list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+    list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+           labels = list(format = '{value}%'),
+           showLastLabel = FALSE, opposite = TRUE)
+  ) %>%
+  hc_xAxis(title = list(text = ""),
+           categories = (data %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+           type = "datetime",
+           labels = list(format = '{value:%Y/%m}')
+           # dateTimeLabelFormats = list(month = '%Y-%m')
+           ) %>%
+  hc_add_series(name   = "Total Referrals Received",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+                type = "column",
+                                zones = list(list(value = 0,
+                                  color = 'red')),
+                color='#a5a7a5',
+                marker = list(enabled= TRUE),
+                dataLabels = list(enabled = TRUE, format='{point.y}')
+                ) %>%
+  hc_add_series(name   = "Conversion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$conversion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#00aeef',
+                lineWidth=3,
+                lineColor='#00aeef',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+   hc_add_series(name   = "Completion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$completion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#d80b8c',
+                lineWidth=3,
+                lineColor='#d80b8c',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+  hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+    hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+    # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+    #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+    hc_tooltip(shared = TRUE, borderColor = "black")
+  }) %>%
+  hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+```
 
 
 ## MSH- Ambulatory Care {.tabset .tabset-fade .tabset-pills}
@@ -4411,6 +4825,61 @@ reactable(
 <br/>
 
 
+### Trend
+```{r MSH-MSDFP Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+data <- referral_vol_specialty_data_site_trend("MSH-MSDFP")
+
+map(unique(data$ReferredToDepartmentSpecialty), function(x){
+highchart() %>%
+  hc_yAxis_multiples(
+    list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+    list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+           labels = list(format = '{value}%'),
+           showLastLabel = FALSE, opposite = TRUE)
+  ) %>%
+  hc_xAxis(title = list(text = ""),
+           categories = (data %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+           type = "datetime",
+           labels = list(format = '{value:%Y/%m}')
+           # dateTimeLabelFormats = list(month = '%Y-%m')
+           ) %>%
+  hc_add_series(name   = "Total Referrals Received",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+                type = "column",
+                                zones = list(list(value = 0,
+                                  color = 'red')),
+                color='#a5a7a5',
+                marker = list(enabled= TRUE),
+                dataLabels = list(enabled = TRUE, format='{point.y}')
+                ) %>%
+  hc_add_series(name   = "Conversion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$conversion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#00aeef',
+                lineWidth=3,
+                lineColor='#00aeef',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+   hc_add_series(name   = "Completion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$completion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#d80b8c',
+                lineWidth=3,
+                lineColor='#d80b8c',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+  hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+    hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+    # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+    #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+    hc_tooltip(shared = TRUE, borderColor = "black")
+  }) %>%
+  hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+```
+
+
 ## MSM {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
 ```{r MSM Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
@@ -5097,6 +5566,61 @@ reactable(
 ```
 <br/>
 <br/>
+
+
+### Trend
+```{r MSM Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+data <- referral_vol_specialty_data_site_trend("MSM")
+
+map(unique(data$ReferredToDepartmentSpecialty), function(x){
+highchart() %>%
+  hc_yAxis_multiples(
+    list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+    list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+           labels = list(format = '{value}%'),
+           showLastLabel = FALSE, opposite = TRUE)
+  ) %>%
+  hc_xAxis(title = list(text = ""),
+           categories = (data %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+           type = "datetime",
+           labels = list(format = '{value:%Y/%m}')
+           # dateTimeLabelFormats = list(month = '%Y-%m')
+           ) %>%
+  hc_add_series(name   = "Total Referrals Received",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+                type = "column",
+                                zones = list(list(value = 0,
+                                  color = 'red')),
+                color='#a5a7a5',
+                marker = list(enabled= TRUE),
+                dataLabels = list(enabled = TRUE, format='{point.y}')
+                ) %>%
+  hc_add_series(name   = "Conversion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$conversion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#00aeef',
+                lineWidth=3,
+                lineColor='#00aeef',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+   hc_add_series(name   = "Completion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$completion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#d80b8c',
+                lineWidth=3,
+                lineColor='#d80b8c',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+  hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+    hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+    # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+    #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+    hc_tooltip(shared = TRUE, borderColor = "black")
+  }) %>%
+  hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+```
 
 
 ## MSUS {.tabset .tabset-fade .tabset-pills}
@@ -5787,6 +6311,61 @@ reactable(
 <br/>
 
 
+### Trend
+```{r MSUS Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+data <- referral_vol_specialty_data_site_trend("MSUS")
+
+map(unique(data$ReferredToDepartmentSpecialty), function(x){
+highchart() %>%
+  hc_yAxis_multiples(
+    list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+    list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+           labels = list(format = '{value}%'),
+           showLastLabel = FALSE, opposite = TRUE)
+  ) %>%
+  hc_xAxis(title = list(text = ""),
+           categories = (data %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+           type = "datetime",
+           labels = list(format = '{value:%Y/%m}')
+           # dateTimeLabelFormats = list(month = '%Y-%m')
+           ) %>%
+  hc_add_series(name   = "Total Referrals Received",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+                type = "column",
+                                zones = list(list(value = 0,
+                                  color = 'red')),
+                color='#a5a7a5',
+                marker = list(enabled= TRUE),
+                dataLabels = list(enabled = TRUE, format='{point.y}')
+                ) %>%
+  hc_add_series(name   = "Conversion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$conversion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#00aeef',
+                lineWidth=3,
+                lineColor='#00aeef',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+   hc_add_series(name   = "Completion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$completion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#d80b8c',
+                lineWidth=3,
+                lineColor='#d80b8c',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+  hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+    hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+    # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+    #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+    hc_tooltip(shared = TRUE, borderColor = "black")
+  }) %>%
+  hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+```
+
+
 ## MSW {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
 ```{r MSW Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
@@ -6472,6 +7051,61 @@ reactable(
 ```
 <br/>
 <br/>
+
+
+### Trend
+```{r MSW Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+data <- referral_vol_specialty_data_site_trend("MSW")
+
+map(unique(data$ReferredToDepartmentSpecialty), function(x){
+highchart() %>%
+  hc_yAxis_multiples(
+    list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+    list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+           labels = list(format = '{value}%'),
+           showLastLabel = FALSE, opposite = TRUE)
+  ) %>%
+  hc_xAxis(title = list(text = ""),
+           categories = (data %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+           type = "datetime",
+           labels = list(format = '{value:%Y/%m}')
+           # dateTimeLabelFormats = list(month = '%Y-%m')
+           ) %>%
+  hc_add_series(name   = "Total Referrals Received",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+                type = "column",
+                                zones = list(list(value = 0,
+                                  color = 'red')),
+                color='#a5a7a5',
+                marker = list(enabled= TRUE),
+                dataLabels = list(enabled = TRUE, format='{point.y}')
+                ) %>%
+  hc_add_series(name   = "Conversion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$conversion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#00aeef',
+                lineWidth=3,
+                lineColor='#00aeef',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+   hc_add_series(name   = "Completion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$completion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#d80b8c',
+                lineWidth=3,
+                lineColor='#d80b8c',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+  hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+    hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+    # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+    #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+    hc_tooltip(shared = TRUE, borderColor = "black")
+  }) %>%
+  hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+```
 
 
 ## Network {.tabset .tabset-fade .tabset-pills}
@@ -7161,6 +7795,60 @@ reactable(
 <br/>
 
 
+### Trend
+```{r Network Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+data <- referral_vol_specialty_data_site_trend("Network")
+
+map(unique(data$ReferredToDepartmentSpecialty), function(x){
+highchart() %>%
+  hc_yAxis_multiples(
+    list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+    list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+           labels = list(format = '{value}%'),
+           showLastLabel = FALSE, opposite = TRUE)
+  ) %>%
+  hc_xAxis(title = list(text = ""),
+           categories = (data %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+           type = "datetime",
+           labels = list(format = '{value:%Y/%m}')
+           # dateTimeLabelFormats = list(month = '%Y-%m')
+           ) %>%
+  hc_add_series(name   = "Total Referrals Received",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+                type = "column",
+                                zones = list(list(value = 0,
+                                  color = 'red')),
+                color='#a5a7a5',
+                marker = list(enabled= TRUE),
+                dataLabels = list(enabled = TRUE, format='{point.y}')
+                ) %>%
+  hc_add_series(name   = "Conversion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$conversion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#00aeef',
+                lineWidth=3,
+                lineColor='#00aeef',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+   hc_add_series(name   = "Completion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$completion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#d80b8c',
+                lineWidth=3,
+                lineColor='#d80b8c',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+  hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+    hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+    # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+    #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+    hc_tooltip(shared = TRUE, borderColor = "black")
+  }) %>%
+  hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+```
+
 
 ## Oncology {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
@@ -7849,4 +8537,58 @@ reactable(
 <br/>
 <br/>
 
+
+### Trend
+```{r Oncology Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+
+data <- referral_vol_specialty_data_site_trend("Oncology")
+
+map(unique(data$ReferredToDepartmentSpecialty), function(x){
+highchart() %>%
+  hc_yAxis_multiples(
+    list(title = list(text = "# of Referrals"), lineWidth = 3, min = 0),
+    list(title = list(text = "% of Referrals Received"), min = -50,max=200,
+           labels = list(format = '{value}%'),
+           showLastLabel = FALSE, opposite = TRUE)
+  ) %>%
+  hc_xAxis(title = list(text = ""),
+           categories = (data %>% filter(ReferredToDepartmentSpecialty == x))$createdMonthYear,
+           type = "datetime",
+           labels = list(format = '{value:%Y/%m}')
+           # dateTimeLabelFormats = list(month = '%Y-%m')
+           ) %>%
+  hc_add_series(name   = "Total Referrals Received",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$Total,
+                type = "column",
+                                zones = list(list(value = 0,
+                                  color = 'red')),
+                color='#a5a7a5',
+                marker = list(enabled= TRUE),
+                dataLabels = list(enabled = TRUE, format='{point.y}')
+                ) %>%
+  hc_add_series(name   = "Conversion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$conversion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#00aeef',
+                lineWidth=3,
+                lineColor='#00aeef',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+   hc_add_series(name   = "Completion Rate",
+                data   = (data %>% filter(ReferredToDepartmentSpecialty == x))$completion_rate,
+                 marker = list(enabled= TRUE), yAxis = 1,
+                color='#d80b8c',
+                lineWidth=3,
+                lineColor='#d80b8c',
+                dataLabels = list(enabled = TRUE, format='{point.y}%')
+                ) %>%
+  hc_legend(align = "left", verticalAlign = "top", itemStyle = list(fontFamily ='Calibri',color ='black', fontSize = "14px")) %>%
+    hc_title(text = paste0(x, " - Referrals Outcome"), align = "left", style = list(fontWeight = 'bold', fontSize = "22px", fontFamily = "Calibri")) %>%
+    # hc_subtitle(text = paste0("Includes Radiology and Rad Onc visits up to ",radiology_date,"<br> Based on visits from ",date_start," to ",date_end),
+    #           align = "left", style = list(fontFace = "italic", fontSize = "16px", fontFamily = "Calibri")) %>%
+    hc_tooltip(shared = TRUE, borderColor = "black")
+  }) %>%
+  hw_grid(ncol = 2, rowheight = 400) %>% htmltools::browsable()
+
+```
 
