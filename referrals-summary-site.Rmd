@@ -1816,7 +1816,7 @@ reactable(
 
 
 ### Trend
-```{r MSHS Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r MSHS Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 map(unique(referral_vol_specialty_data_mshs_trend$ReferredToDepartmentSpecialty), function(x){
 highchart() %>%
@@ -2653,7 +2653,7 @@ reactable(
 
 
 ### Trend
-```{r MSBI Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r MSBI Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 data <- referral_vol_specialty_data_site_trend("MSBI")
 
@@ -3395,7 +3395,7 @@ reactable(
 <br/>
 
 ### Trend
-```{r MSDMG Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r MSDMG Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 data <- referral_vol_specialty_data_site_trend("MSDMG")
 
@@ -3909,7 +3909,7 @@ reactable(
 
 
 ### `r current_monthYear_label` MTD
-```{r MSH- Ambulatory Care Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r MSH- Ambulatory Care Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
     tags$button(
@@ -4826,7 +4826,7 @@ reactable(
 
 
 ### Trend
-```{r MSH-MSDFP Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r MSH-MSDFP Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 data <- referral_vol_specialty_data_site_trend("MSH-MSDFP")
 
@@ -5569,7 +5569,7 @@ reactable(
 
 
 ### Trend
-```{r MSM Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r MSM Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 data <- referral_vol_specialty_data_site_trend("MSM")
 
@@ -6312,7 +6312,7 @@ reactable(
 
 
 ### Trend
-```{r MSUS Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r MSUS Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 data <- referral_vol_specialty_data_site_trend("MSUS")
 
@@ -7054,7 +7054,7 @@ reactable(
 
 
 ### Trend
-```{r MSW Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r MSW Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 data <- referral_vol_specialty_data_site_trend("MSW")
 
@@ -7796,7 +7796,7 @@ reactable(
 
 
 ### Trend
-```{r Network Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r Network Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 data <- referral_vol_specialty_data_site_trend("Network")
 
@@ -8539,7 +8539,7 @@ reactable(
 
 
 ### Trend
-```{r Oncology Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r Oncology Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 data <- referral_vol_specialty_data_site_trend("Oncology")
 
