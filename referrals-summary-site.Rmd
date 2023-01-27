@@ -506,7 +506,7 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 
 # Connect to Database ----------------------------------------------------------
 # conn1 <- odbcConnect("Caboodle") # Connect to Server
-
+# 
 # conn1 <- dbPool(drv = odbc(), dsn = "Caboodle", timeout = 30)
 # 
 # # Import Referrals+Visit Data --------------------------------------------------
@@ -543,9 +543,9 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 # #   collect()
 # 
 # visitFact_conn <- tbl(conn1, "VisitFact")
-# visitFact_raw <- visitFact_conn %>%
+# visitFact_raw_test <- visitFact_conn %>%
 #   filter(ReferralKey >0) %>%
-#   group_by(ReferralKey, AppointmentStatus, AppointmentCreationDateKey, AppointmentCancellationDateKey) %>%
+#   group_by(ReferralKey, PatientKey, VisitKey, AppointmentStatus, AppointmentCreationDateKey, AppointmentCancellationDateKey) %>%
 #   summarise(total = n()) %>%
 #   collect() %>%
 #   group_by(ReferralKey) %>%
@@ -1076,46 +1076,46 @@ referral_vol_specialty_data_site_trend <- function(site){
 ```{r Referrals Lead Days to Scheduling by Month, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 # MSHS -------------------------------------------------------------------------
-mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP", 
-                         "MSM", "MSUS", "MSW", "Network", "Oncology")
-
-
-  # Referrals Data by Month
-  referral_received_specialty_data_mshs_trend <- referral_vol %>%
-    filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(ReceivedBySite %in% mshs_sites) %>%
-    filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
-    group_by(ReferredToDepartmentSpecialty, createdMonthYear) %>%
-    summarise(total_received = n()) %>%
-    mutate(yearMonth = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m"))
-  
-  referral_scheduled_specialty_data_mshs_trend <- referral_vol %>%
-    filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(ReceivedBySite %in% mshs_sites) %>%
-    filter(first_appt_created < report_run_date & first_appt_created >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
-    group_by(ReferredToDepartmentSpecialty, scheduledYearMonth) %>%
-    summarise(total_scheduled = n()) %>%
-    rename(yearMonth = scheduledYearMonth)
-  
-  referral_leadDays_specialty_data_mshs_trend <- referral_vol %>%
-    filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(ReceivedBySite %in% mshs_sites) %>%
-    filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
-    group_by(ReferredToDepartmentSpecialty, scheduledYearMonth) %>%
-    summarise(leadDays= median(leadDays, na.rm = TRUE)) %>%
-    rename(yearMonth = scheduledYearMonth)
-  
-  
-  #put all data frames into list
-  df_list <- list(referral_received_specialty_data_mshs_trend,
-                  referral_scheduled_specialty_data_mshs_trend,
-                  referral_leadDays_specialty_data_mshs_trend)
-  
-  #merge all data frames together
-  referral_leadDays_specialty_data_mshs_trend_merged <- Reduce(function(x, y) merge(x, y, all=TRUE), df_list)  
+# mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP", 
+#                          "MSM", "MSUS", "MSW", "Network", "Oncology")
+# 
+# 
+#   # Referrals Data by Month
+#   referral_received_specialty_data_mshs_trend <- referral_vol %>%
+#     filter(ReceivedByDept != "*Unspecified") %>%
+#     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+#     filter(ReceivedBySite %in% mshs_sites) %>%
+#     filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
+#     group_by(ReferredToDepartmentSpecialty, createdMonthYear) %>%
+#     summarise(total_received = n()) %>%
+#     mutate(yearMonth = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m"))
+#   
+#   referral_scheduled_specialty_data_mshs_trend <- referral_vol %>%
+#     filter(ReceivedByDept != "*Unspecified") %>%
+#     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+#     filter(ReceivedBySite %in% mshs_sites) %>%
+#     filter(first_appt_created < report_run_date & first_appt_created >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
+#     group_by(ReferredToDepartmentSpecialty, scheduledYearMonth) %>%
+#     summarise(total_scheduled = n()) %>%
+#     rename(yearMonth = scheduledYearMonth)
+#   
+#   referral_leadDays_specialty_data_mshs_trend <- referral_vol %>%
+#     filter(ReceivedByDept != "*Unspecified") %>%
+#     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
+#     filter(ReceivedBySite %in% mshs_sites) %>%
+#     filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
+#     group_by(ReferredToDepartmentSpecialty, scheduledYearMonth) %>%
+#     summarise(leadDays= median(leadDays, na.rm = TRUE)) %>%
+#     rename(yearMonth = scheduledYearMonth)
+#   
+#   
+#   #put all data frames into list
+#   df_list <- list(referral_received_specialty_data_mshs_trend,
+#                   referral_scheduled_specialty_data_mshs_trend,
+#                   referral_leadDays_specialty_data_mshs_trend)
+#   
+#   #merge all data frames together
+#   referral_leadDays_specialty_data_mshs_trend_merged <- Reduce(function(x, y) merge(x, y, all=TRUE), df_list)  
 
 
 ```
@@ -1126,6 +1126,16 @@ mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",
 *Data Source: EPIC Caboodle Referrals Data and Clarity Scheduling Data*<br/>
 _________________________________________________________________________________________________________________________________________________________________________________________________
 <br/>
+
+:::: {.blackbox data-latex=""}
+::: {.center data-latex=""}
+<span style='font-size: 18px;; color: #d80b8c'>**Definitions**</span><br/>
+<br/>
+<span style='font-size: 16px;'>-- **Conversion Rate:** Total referrals with **scheduled visits** over total referrals received</span><br/>
+<span style='font-size: 16px;'>-- **Completion Rate:** Total referrals with **arrived visits** over total referrals received</span><br/>
+<br/>
+:::
+::::
 
 ## MSHS {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
