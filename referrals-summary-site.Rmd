@@ -1123,13 +1123,12 @@ referral_vol_specialty_data_site_trend <- function(site){
 
 # Ambulatory Referrals Summary
 *Report Run Date: `r report_run_date`*<br/>
+*Data Date Range: From 2022-09-01 to `r report_run_date - 1`*<br/>
 *Data Source: EPIC Caboodle Referrals Data and Clarity Scheduling Data*<br/>
-_________________________________________________________________________________________________________________________________________________________________________________________________
 <br/>
-
 :::: {.blackbox data-latex=""}
 ::: {.center data-latex=""}
-<span style='font-size: 18px;; color: #d80b8c'>**Definitions**</span><br/>
+<span style='font-size: 18px;; color: #d80b8c'>**Metric Definisions:**</span><br/>
 <br/>
 <span style='font-size: 16px;'>-- **Conversion Rate:** Total referrals with **scheduled visits** over total referrals received</span><br/>
 <span style='font-size: 16px;'>-- **Completion Rate:** Total referrals with **arrived visits** over total referrals received</span><br/>
