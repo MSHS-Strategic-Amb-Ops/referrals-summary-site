@@ -505,57 +505,59 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 ```{r Referrals Data Importing, echo = FALSE, warning = FALSE, message = FALSE}
 
 # Connect to Database ----------------------------------------------------------
-# conn1 <- odbcConnect("Caboodle") # Connect to Server
-# 
-# conn1 <- dbPool(drv = odbc(), dsn = "Caboodle", timeout = 30)
-# 
-# # Import Referrals+Visit Data --------------------------------------------------
-# referrals_conn <- tbl(conn1, "Referrals")
-# referrals_raw <- referrals_conn %>%
+conn1 <- odbcConnect("Caboodle") # Connect to Server
+
+conn1 <- dbPool(drv = odbc(), dsn = "Caboodle", timeout = 30)
+
+# Import Referrals+Visit Data --------------------------------------------------
+referrals_conn <- tbl(conn1, "Referrals")
+referrals_raw <- referrals_conn %>%
+  head(1000) %>%
+  collect()
+  mutate(StartInstant = as.Date(StartInstant)) %>%
+  filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
+  filter(Status != "Canceled") %>%
+  collect()
+
+# Import Referrals Data for Addtional Referral Details -------------------------
+# referralFactAll <- sqlQuery(conn1, "SELECT TOP 10* FROM PRDREPORT.FullAccess.ReferralFact")
+referralFact_conn <- tbl(conn1, "ReferralFact")
+
+referralFact_raw <- referralFact_conn %>%
+  head(1000) %>%
+  collect()
+  mutate(StartInstant = as.Date(StartInstant)) %>%
+  filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
+  group_by(ReferralKey, ReferredToDepartmentSpecialty, StartInstant, `_CreationInstant`, `_LastUpdatedInstant`, LastEnteredWorkqueueDateKey_X,
+           LastEnteredWorkqueueTimeKey_X, LastEnteredWorkqueueName_X,
+           Class, Priority, Redirected, Rejected, TriageRejectionReason, InAnyWorkqueue, StatusReason, SchedulingStatus,
+           FirstCallMadeInstant, FirstEncounterCreatedInstant, FirstEncounterInstant, ExpirationInstant,
+           WasPatientContactedWithin12Hours_X,
+           ProfessionalChargeAmount, ProfessionalChargeEstimate, HospitalChargeEstimate) %>%
+  summarise(total = n()) %>%
+  collect()
+
+referralFact_raw$total <- NULL
+
+# referralFact_all <- referralFact_conn %>%
 #   mutate(StartInstant = as.Date(StartInstant)) %>%
-#   filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
-#   filter(Status != "Canceled") %>%
+#   filter(StartInstant == as.Date("2022-11-03")) %>%
 #   collect()
-# 
-# # Import Referrals Data for Addtional Referral Details -------------------------
-# # referralFactAll <- sqlQuery(conn1, "SELECT TOP 10* FROM PRDREPORT.FullAccess.ReferralFact")
-# referralFact_conn <- tbl(conn1, "ReferralFact")
-# 
-# referralFact_raw <- referralFact_conn %>%
-#   # head(1000) %>%
-#   # collect()
-#   mutate(StartInstant = as.Date(StartInstant)) %>%
-#   filter(StartInstant >= as.Date("2022-04-01") & StartInstant <= report_run_date) %>%
-#   group_by(ReferralKey, ReferredToDepartmentSpecialty, StartInstant, `_CreationInstant`, `_LastUpdatedInstant`, LastEnteredWorkqueueDateKey_X,
-#            LastEnteredWorkqueueTimeKey_X, LastEnteredWorkqueueName_X,
-#            Class, Priority, Redirected, Rejected, TriageRejectionReason, InAnyWorkqueue, StatusReason, SchedulingStatus,
-#            FirstCallMadeInstant, FirstEncounterCreatedInstant, FirstEncounterInstant, ExpirationInstant,
-#            WasPatientContactedWithin12Hours_X,
-#            ProfessionalChargeAmount, ProfessionalChargeEstimate, HospitalChargeEstimate) %>%
-#   summarise(total = n()) %>%
-#   collect()
-# 
-# referralFact_raw$total <- NULL
-# 
-# # referralFact_all <- referralFact_conn %>%
-# #   mutate(StartInstant = as.Date(StartInstant)) %>%
-# #   filter(StartInstant == as.Date("2022-11-03")) %>%
-# #   collect()
-# 
-# visitFact_conn <- tbl(conn1, "VisitFact")
-# visitFact_raw_test <- visitFact_conn %>%
-#   filter(ReferralKey >0) %>%
-#   group_by(ReferralKey, PatientKey, VisitKey, AppointmentStatus, AppointmentCreationDateKey, AppointmentCancellationDateKey) %>%
-#   summarise(total = n()) %>%
-#   collect() %>%
-#   group_by(ReferralKey) %>%
-#   mutate(first_appt = as.Date(as.character(min(AppointmentCreationDateKey)),  format = "%Y%m%d"))
-# 
-# # Append Additional Referral Columns -------------------------------------------
-# referrals_merged <- left_join(referrals_raw, subset(referralFact_raw, select = -c(StartInstant, Priority)))
-# referrals_merged <- referrals_merged %>%
-#   mutate(SentByDepID = as.character(SentByDepID),
-#          ReceivedByDepID = as.character(ReceivedByDepID))
+
+visitFact_conn <- tbl(conn1, "VisitFact")
+visitFact_raw_test <- visitFact_conn %>%
+  filter(ReferralKey >0) %>%
+  group_by(ReferralKey, PatientKey, VisitKey, AppointmentStatus, AppointmentCreationDateKey, AppointmentCancellationDateKey) %>%
+  summarise(total = n()) %>%
+  collect() %>%
+  group_by(ReferralKey) %>%
+  mutate(first_appt = as.Date(as.character(min(AppointmentCreationDateKey)),  format = "%Y%m%d"))
+
+# Append Additional Referral Columns -------------------------------------------
+referrals_merged <- left_join(referrals_raw, subset(referralFact_raw, select = -c(StartInstant, Priority)))
+referrals_merged <- referrals_merged %>%
+  mutate(SentByDepID = as.character(SentByDepID),
+         ReceivedByDepID = as.character(ReceivedByDepID))
 
 ```
 
@@ -1125,16 +1127,18 @@ referral_vol_specialty_data_site_trend <- function(site){
 *Report Run Date: `r report_run_date`*<br/>
 *Data Date Range: From 2022-09-01 to `r report_run_date - 1`*<br/>
 *Data Source: EPIC Caboodle Referrals Data and Clarity Scheduling Data*<br/>
+
 <br/>
 :::: {.blackbox data-latex=""}
 ::: {.center data-latex=""}
-<span style='font-size: 18px;; color: #d80b8c'>**Metric Definisions:**</span><br/>
+<span style='font-size: 18px;; color: #d80b8c'>**Metric Definitions:**</span><br/>
 <br/>
 <span style='font-size: 16px;'>-- **Conversion Rate:** Total referrals with **scheduled visits** over total referrals received</span><br/>
 <span style='font-size: 16px;'>-- **Completion Rate:** Total referrals with **arrived visits** over total referrals received</span><br/>
 <br/>
 :::
 ::::
+<br/>
 
 ## MSHS {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
