@@ -1127,7 +1127,6 @@ referral_vol_specialty_data_site_trend <- function(site){
 *Report Run Date: `r report_run_date`*<br/>
 *Data Date Range: From 2022-09-01 to `r report_run_date - 1`*<br/>
 *Data Source: EPIC Caboodle Referrals Data and Clarity Scheduling Data*<br/>
-__________________________________________________________________________________________________________________________________________________________
 
 :::: {.blackbox data-latex=""}
 ::: {.center data-latex=""}
@@ -1135,9 +1134,9 @@ ________________________________________________________________________________
 :::
 <span style='font-size: 16px;'>-- **Conversion Rate:** Total referrals with **scheduled visits** over total referrals received</span><br/>
 <span style='font-size: 16px;'>-- **Completion Rate:** Total referrals with **arrived visits** over total referrals received</span>
+<span style='font-size: 16px;'>-- **Unassigned Referrals:** Total referrals with **no visits linked**</span>
 ::::
-__________________________________________________________________________________________________________________________________________________________
-<br/>
+
 
 ## MSHS {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
@@ -1225,7 +1224,7 @@ reactable(
     ),
     
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -1454,7 +1453,7 @@ reactable(
     ),
     
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -1683,7 +1682,7 @@ reactable(
     ),
     
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -2062,7 +2061,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -2291,7 +2290,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -2520,7 +2519,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -2805,7 +2804,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -3034,7 +3033,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -3263,7 +3262,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -3547,7 +3546,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -3776,7 +3775,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -4005,7 +4004,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -4235,7 +4234,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -4464,7 +4463,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -4693,7 +4692,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -4978,7 +4977,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -5207,7 +5206,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -5436,7 +5435,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -5721,7 +5720,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -5950,7 +5949,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -6179,7 +6178,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -6464,7 +6463,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -6692,7 +6691,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -6921,7 +6920,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -7206,7 +7205,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -7434,7 +7433,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -7663,7 +7662,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -7948,7 +7947,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -8177,7 +8176,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
@@ -8406,7 +8405,7 @@ reactable(
     ),
 
     Pending = colDef(
-      name = "Referrals without Scheduled Appointments",
+      name = "Referrals Unassigned",
       maxWidth = 100,
       headerStyle = list(background = "#210070", color = "white", fontWeight = "Bold", fontSize = "14px"),
       aggregate = "sum",
