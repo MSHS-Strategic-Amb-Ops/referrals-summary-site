@@ -1128,17 +1128,15 @@ referral_vol_specialty_data_site_trend <- function(site){
 *Data Date Range: From 2022-09-01 to `r report_run_date - 1`*<br/>
 *Data Source: EPIC Caboodle Referrals Data and Clarity Scheduling Data*<br/>
 
-<br/>
+
 :::: {.blackbox data-latex=""}
 ::: {.center data-latex=""}
-<span style='font-size: 18px;; color: #d80b8c'>**Metric Definitions:**</span><br/>
-<br/>
-<span style='font-size: 16px;'>-- **Conversion Rate:** Total referrals with **scheduled visits** over total referrals received</span><br/>
-<span style='font-size: 16px;'>-- **Completion Rate:** Total referrals with **arrived visits** over total referrals received</span><br/>
-<br/>
+<span style='font-size: 18px;; color: #d80b8c'>**Metric Definitions:**</span>
 :::
+<span style='font-size: 16px;'>-- **Conversion Rate:** Total referrals with **scheduled visits** over total referrals received</span><br/>
+<span style='font-size: 16px;'>-- **Completion Rate:** Total referrals with **arrived visits** over total referrals received</span>
 ::::
-<br/>
+
 
 ## MSHS {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
