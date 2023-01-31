@@ -1133,7 +1133,7 @@ referral_vol_specialty_data_site_trend <- function(site){
 <span style='font-size: 18px;; color: #d80b8c'>**Metric Definitions:**</span>
 :::
 <span style='font-size: 16px;'>-- **Conversion Rate:** Total referrals with **scheduled visits** over total referrals received</span><br/>
-<span style='font-size: 16px;'>-- **Completion Rate:** Total referrals with **arrived visits** over total referrals received</span>
+<span style='font-size: 16px;'>-- **Completion Rate:** Total referrals with **arrived visits** over total referrals received</span><br/>
 <span style='font-size: 16px;'>-- **Unassigned Referrals:** Total referrals with **no visits linked**</span><br/>
 <span style='font-size: 14px; color: #FF0000'>**This report may take a few seconds to load*</span>
 ::::
