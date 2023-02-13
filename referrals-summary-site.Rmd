@@ -8947,7 +8947,7 @@ reactable(
 
 
 ### `r current_monthYear_label` MTD
-```{r MSHP Last Month Total Referrals Sent Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+```{r MSHP Current Month Total Referrals Sent Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
     tags$button(
