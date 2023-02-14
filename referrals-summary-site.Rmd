@@ -648,8 +648,24 @@ referral_vol <- readRDS(paste0(path,"referral_vol.rds"))
 ```
 
 
-```{r Sinai Logo, echo=FALSE, out.width = '30%'}
+```{r Sinai Logo, echo=FALSE, out.width = '20%'}
 knitr::include_graphics("Mount_Sinai_Logo_H.png")
+```
+
+
+```{r}
+
+# 
+# test <- referrals_vol %>%
+#   filter(CreationToScheduledDate > 0) %>%
+#   filter(referred)
+# 
+# hchart(test,type = "scatter",
+#        hcaes(x = CreationToScheduledDate, y = CreationToFirstEncounterDate),
+#        showInLegend = FALSE) %>%
+#   hc_tooltip(pointFormat = "height: {point.y} <br> weight: {point.x}")
+
+
 ```
 
 
@@ -1131,6 +1147,7 @@ referral_sending_vol_specialty_data_site_trend <- function(site){
 *Report Run Date: `r report_run_date`*<br/>
 *Data Date Range: From 2022-09-01 to `r report_run_date - 1`*<br/>
 *Data Source: EPIC Caboodle Referrals Data and Clarity Scheduling Data*<br/>
+**MSHS does not include MSHP**<br/>
 
 :::: {.blackbox data-latex=""}
 ::: {.center data-latex=""}
@@ -1142,8 +1159,15 @@ referral_sending_vol_specialty_data_site_trend <- function(site){
 <span style='font-size: 14px; color: #FF0000'>**This report may take a few seconds to load**</span>
 ::::
 
+## Referrals Summary 
+```{r All Referrals Summary,  echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
-## MSHS {.tabset .tabset-fade .tabset-pills}
+
+
+```
+
+
+## MSHS* {.tabset .tabset-fade .tabset-pills}
 ### Sep 2022-`r reporting_year` YTD
 ```{r MSHS Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
@@ -8609,12 +8633,10 @@ highchart() %>%
 ```
 
 
-## ______________________________
-
 
 ## MSHP
-### Sent {.tabset .tabset-fade .tabset-pills}
-### Sep 2022-`r reporting_year` YTD
+### Referrals Sent {.tabset .tabset-fade .tabset-pills}
+#### Sep 2022-`r reporting_year` YTD
 ```{r MSHP Total Referrals Sent Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
@@ -8780,7 +8802,7 @@ reactable(
 <br/>
 
 
-### `r full_monthYear_label`
+#### `r full_monthYear_label`
 ```{r MSHP Last Month Total Referrals Sent Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
@@ -8946,7 +8968,7 @@ reactable(
 <br/>
 
 
-### `r current_monthYear_label` MTD
+#### `r current_monthYear_label` MTD
 ```{r MSHP Current Month Total Referrals Sent Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
@@ -9112,8 +9134,8 @@ reactable(
 <br/>
 
 
-### Received {.tabset .tabset-fade .tabset-pills}
-### Sep 2022-`r reporting_year` YTD
+### Referrals Received {.tabset .tabset-fade .tabset-pills}
+#### Sep 2022-`r reporting_year` YTD
 ```{r MSHP Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
@@ -9143,7 +9165,7 @@ reactable(
     wrap = TRUE,
   searchable = TRUE,
 
-  # groupBy = "ReferredToDepartmentSpecialty",
+  groupBy = "ReferredToDepartmentSpecialty",
 
   columnGroups = list(
     colGroup(name = "", columns = c("ReferredToDepartmentSpecialty", "ReceivedByDept"),
@@ -9342,7 +9364,7 @@ reactable(
 <br/>
 
 
-### `r full_monthYear_label`
+#### `r full_monthYear_label`
 ```{r MSHP Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
@@ -9571,7 +9593,7 @@ reactable(
 <br/>
 
 
-### `r current_monthYear_label` MTD
+#### `r current_monthYear_label` MTD
 ```{r MSHP Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
@@ -9800,7 +9822,7 @@ reactable(
 <br/>
 
 
-### Trend
+#### Trend
 ```{r MSHP Conversion Rate Trend, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 
 data <- referral_vol_specialty_data_site_trend("MSHP")
