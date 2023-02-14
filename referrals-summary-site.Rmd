@@ -1147,7 +1147,7 @@ referral_sending_vol_specialty_data_site_trend <- function(site){
 *Report Run Date: `r report_run_date`*<br/>
 *Data Date Range: From 2022-09-01 to `r report_run_date - 1`*<br/>
 *Data Source: EPIC Caboodle Referrals Data and Clarity Scheduling Data*<br/>
-**MSHS does not include MSHP**<br/>
+**MSHS does not include MSHP as receiving site**<br/>
 
 :::: {.blackbox data-latex=""}
 ::: {.center data-latex=""}
@@ -1159,12 +1159,12 @@ referral_sending_vol_specialty_data_site_trend <- function(site){
 <span style='font-size: 14px; color: #FF0000'>**This report may take a few seconds to load**</span>
 ::::
 
-## Referrals Summary 
-```{r All Referrals Summary,  echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+<!-- ## Referrals Summary  -->
+<!-- ```{r All Referrals Summary,  echo = FALSE, warning = FALSE, message = FALSE, fig.width=12} -->
 
 
 
-```
+<!-- ``` -->
 
 
 ## MSHS* {.tabset .tabset-fade .tabset-pills}
