@@ -689,7 +689,7 @@ knitr::include_graphics("Mount_Sinai_Logo_H.png")
 mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP", 
                          "MSM", "MSUS", "MSW", "Network", "Oncology")
   
-  # Referrals Data 
+  # Referrals Received Data 
   referral_vol_site_data_mshs <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
@@ -731,6 +731,7 @@ mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",
   referral_vol_site_data_mshs$ReceivedByDepID <- NULL
   
   
+  # Referrals Sent Data -------------------------------------------------------
   
 
 # Site Breakdown Function ------------------------------------------------------
@@ -774,6 +775,7 @@ received_vol_site_ytd <- function(site){
   
   return(referral_vol_site_data)
 }
+  
   
   
   # Site Breakdown Function ------------------------------------------------------
@@ -2604,12 +2606,12 @@ htmltools::browsable(
   tagList(
     tags$button(
       "Expand/collapse all",
-      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msbi-1')"
+      onclick = "Reactable.toggleAllRowsExpanded('referrals-expansion-table-msbi')"
     ),
 
 reactable(
   received_vol_site_ytd("MSBI"),
-  elementId = "referrals-expansion-table-msbi-1",
+  elementId = "referrals-expansion-table-msbi",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
@@ -5022,7 +5024,7 @@ htmltools::browsable(
 
 reactable(
   sending_vol_site_month("MSH- Ambulatory Care", current_monthYear, current_yearMonth),
-  elementId = "referrals-sending-expansion-table-mshp-current",
+  elementId = "referrals-sending-expansion-table-msh-amb-last",
   style = list(fontFamily = 'Calibri',
                  fontSize = '14px'),
     defaultColDef = colDef(align = "left",
