@@ -1187,10 +1187,12 @@ referral_sending_vol_specialty_data_site_trend <- function(site){
 ::: {.center data-latex=""}
 <span style='font-size: 18px;; color: #d80b8c'>**Metric Definitions:**</span>
 :::
+<span style='font-size: 16px;'>-- **Referrals Unassigned:** Total referrals with **no visits linked**</span><br/>
+<span style='font-size: 16px;'>-- **Avg Referrals Sent per Visit:** Total referrals sent over total visits completed</span><br/>
 <span style='font-size: 16px;'>-- **Conversion Rate:** Total referrals with **scheduled visits** over total referrals received</span><br/>
 <span style='font-size: 16px;'>-- **Completion Rate:** Total referrals with **arrived visits** over total referrals received</span><br/>
-<span style='font-size: 16px;'>-- **Unassigned Referrals:** Total referrals with **no visits linked**</span><br/>
-<span style='font-size: 14px; color: #FF0000'>**This report may take a few seconds to load**</span>
+<br/>
+<span style='font-size: 16px; color: #FF0000'>**This report may take a few seconds to load**</span>
 ::::
 
 <!-- ## Referrals Summary -->
@@ -1202,7 +1204,7 @@ referral_sending_vol_specialty_data_site_trend <- function(site){
 
 
 ## MSHS* {.tabset .tabset-fade .tabset-pills}
-#### Sep 2022-`r reporting_year` YTD
+### Sep 2022-`r reporting_year` YTD
 ```{r MSHS Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
@@ -1431,7 +1433,7 @@ reactable(
 <br/>
 
 
-#### `r full_monthYear_label`
+### `r full_monthYear_label`
 ```{r MSHS Last Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
@@ -1660,7 +1662,7 @@ reactable(
 <br/>
 
 
-#### `r current_monthYear_label` MTD
+### `r current_monthYear_label` MTD
 ```{r MSHS Current Month Total Referrals Received Output, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
 htmltools::browsable(
   tagList(
