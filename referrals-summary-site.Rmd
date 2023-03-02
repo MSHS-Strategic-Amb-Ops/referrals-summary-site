@@ -845,303 +845,303 @@ sending_vol_site_ytd <- function(site){
 
 
 
-```{r Last Month Referrals Volume Received, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+<!-- ```{r Last Month Referrals Volume Received, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12} -->
 
-# MSHS Current and Last Year ----------------------------------------------------
-referral_vol_site_data_mshs_month <- function(monthYear, yearMonth){
-  
-  mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP", 
-                  "MSM", "MSUS", "MSW", "Network", "Oncology")
-  
-  # Referrals Data 
-  referral_vol_site_data_month_mshs <- referral_vol %>%
-    filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(ReceivedBySite %in% mshs_sites) %>%
-    filter(createdMonthYear == monthYear) %>%
-    group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>%
-    summarise(total_vol = n()) %>%
-    pivot_wider(names_from = ApptStatusFinal,
-                values_from = total_vol,
-                values_fill = 0) 
-  
-  
-  referral_vol_site_data_month_mshs <- referral_vol_site_data_month_mshs %>%
-    mutate(Total = sum(across(where(is.numeric)))) 
-    
-  # Scheduling Data Filtered to Full Month 
-  volume_site_specialty_dept_month <- volume_site_specialty_dept_trend %>% filter(Appt.MonthYear == yearMonth)
-  waitTime_site_specialty_dept_trend_month <- waitTime_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth)
-  new_access_site_specialty_dept_month <- new_access_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth)
-  
-  # Volume Last 3 Months
-  referral_vol_site_data_month_mshs$total_vol <- volume_site_specialty_dept_month$total[match(referral_vol_site_data_month_mshs$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
-  
-  referral_vol_site_data_month_mshs <- referral_vol_site_data_month_mshs %>%
-    adorn_totals("row", name = "MSHS Total") %>%
-    mutate(conversion_rate = round((Total - Pending)/Total,2),
-           completion_rate = round(Arrived/Total,2)) %>%
-    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate, total_vol)
-  
-  # New PT Volume Last 3 Months
-  referral_vol_site_data_month_mshs$new_pts <- volume_site_specialty_dept_month$new_perc[match(referral_vol_site_data_month_mshs$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
-  
-  # Median New Wait Time Last 3 Months
-  referral_vol_site_data_month_mshs$new_access <- waitTime_site_specialty_dept_trend_month$med_wait[match(referral_vol_site_data_month_mshs$ReceivedByDepID, waitTime_site_specialty_dept_trend_month$DepartmentId)]
-  
-  # New Patients Scheduled Last 3 Months
-  referral_vol_site_data_month_mshs$new_14access_perc <- new_access_site_specialty_dept_month$perc_14days[match(referral_vol_site_data_month_mshs$ReceivedByDepID, new_access_site_specialty_dept_month$DepartmentId)]
-  
-  referral_vol_site_data_month_mshs$ReceivedByDepID <- NULL
-  
-  return(referral_vol_site_data_month_mshs)
-  
-}
-  
+<!-- # MSHS Current and Last Year ---------------------------------------------------- -->
+<!-- referral_vol_site_data_mshs_month <- function(monthYear, yearMonth){ -->
 
-# Site Breakdown Function Last and Current Year --------------------------------
-received_vol_site_month <- function(site, monthYear, yearMonth){
-  
-  # site <- "MSBI"
-  # monthYear <- full_monthYear
-  # yearMonth <- full_yearMonth
-  # 
-  #  monthYear <- current_monthYear
-  # yearMonth <- current_yearMonth
+<!--   mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",  -->
+<!--                   "MSM", "MSUS", "MSW", "Network", "Oncology") -->
 
-  # Referrals Data 
-  referral_vol_site_data_month <- referral_vol %>%
-    filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(ReceivedBySite == site) %>%
-    filter(createdMonthYear == monthYear) %>%
-    group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>%
-    summarise(total_vol = n()) %>%
-    pivot_wider(names_from = ApptStatusFinal,
-                values_from = total_vol,
-                values_fill = 0) 
-  
-
-  # Add Missing ApptStatusFinal
-  nms <- c("ReferredToDepartmentSpecialty", "ReceivedByDept", "ReceivedByDepID", 
-          "Pending", "Arrived", "Canceled", "Scheduled", "No Show")   # Vector of columns you want in this data.frame
-  
-  Missing <- setdiff(nms, names(referral_vol_site_data_month))  # Find names of missing columns
-  referral_vol_site_data_month[Missing] <- 0                    # Add them, filled with '0's
-  referral_vol_site_data_month <- referral_vol_site_data_month[nms]     
-  
-  
-  referral_vol_site_data_month <- referral_vol_site_data_month %>%
-    mutate(Total = sum(across(where(is.numeric)))) 
-  
-  
-  # Scheduling Data Filtered to Full/Current Month 
-  volume_site_specialty_dept_month <- volume_site_specialty_dept_trend %>% filter(Appt.MonthYear == yearMonth)
-  waitTime_site_specialty_dept_trend_month <- waitTime_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth)
-  new_access_site_specialty_dept_month <- new_access_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth)
-  
-  
-  # Volume Last 3 Months
-  referral_vol_site_data_month$total_vol <- volume_site_specialty_dept_month$total[match(referral_vol_site_data_month$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
-  
-  referral_vol_site_data_month <- referral_vol_site_data_month %>%
-    adorn_totals("row", name = paste(site, "Total")) %>%
-    mutate(conversion_rate = round((Total - Pending)/Total,2),
-           completion_rate = round(Arrived/Total,2)) %>%
-    dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate, total_vol)
-  
-  
-  # New PT Volume Last 3 Months
-  referral_vol_site_data_month$new_pts <- volume_site_specialty_dept_month$new_perc[match(referral_vol_site_data_month$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)]
-  
-  # Median New Wait Time Last 3 Months
-  referral_vol_site_data_month$new_access <- waitTime_site_specialty_dept_trend_month$med_wait[match(referral_vol_site_data_month$ReceivedByDepID, waitTime_site_specialty_dept_trend_month$DepartmentId)]
-  
-  # New Patients Scheduled Last 3 Months
-  referral_vol_site_data_month$new_14access_perc <- new_access_site_specialty_dept_month$perc_14days[match(referral_vol_site_data_month$ReceivedByDepID, new_access_site_specialty_dept_month$DepartmentId)]
-  
-  referral_vol_site_data_month$ReceivedByDepID <- NULL
-  
-  return(referral_vol_site_data_month)
-  }
+<!--   # Referrals Data  -->
+<!--   referral_vol_site_data_month_mshs <- referral_vol %>% -->
+<!--     filter(ReceivedByDept != "*Unspecified") %>% -->
+<!--     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>% -->
+<!--     filter(ReceivedBySite %in% mshs_sites) %>% -->
+<!--     filter(createdMonthYear == monthYear) %>% -->
+<!--     group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>% -->
+<!--     summarise(total_vol = n()) %>% -->
+<!--     pivot_wider(names_from = ApptStatusFinal, -->
+<!--                 values_from = total_vol, -->
+<!--                 values_fill = 0)  -->
 
 
-## Referrals by Sending Dept ----------------------------------------------------
-sending_vol_site_month <- function(site, monthYear, yearMonth){
-  
-  # site <- "MSHP"
-  # Referrals Data 
-  
-  # monthYear <- current_monthYear
-  # yearMonth <- "2023-01"
-  
-  referral_sending_vol_site_data_month <- referral_vol %>%
-    filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(SentBySite != "*Unspecified") %>%
-    filter(SentBySpecialty != "*Unspecified") %>%
-    filter(SentBySite == site) %>%
-    filter(createdMonthYear == monthYear) %>%
-    # filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
-    group_by(SentBySpecialty, SentByDept, SentByDepID, ApptStatusFinal) %>%
-    summarise(total_vol = n()) %>%
-    pivot_wider(names_from = ApptStatusFinal,
-                values_from = total_vol,
-                values_fill = 0) 
-  
-  referral_sending_vol_site_data_month <- referral_sending_vol_site_data_month %>%
-    mutate(Total = sum(across(where(is.numeric)))) 
-  
-  
-  # Total Visit Volume 
-  volume_yearMonth <- volume_site_specialty_dept_trend %>%
-    filter(Appt.MonthYear == yearMonth)
-  
-  referral_sending_vol_site_data_month$total_vol <- volume_yearMonth$total[match(referral_sending_vol_site_data_month$SentByDepID, volume_yearMonth$DepartmentId)]
-  referral_sending_vol_site_data_month$total_vol[is.na(referral_sending_vol_site_data_month$total_vol)] <- 0
-  
-  referral_sending_vol_site_data_month <- referral_sending_vol_site_data_month %>%
-    adorn_totals("row", name = paste(site, "Total"))
-    
-  referral_sending_vol_site_data_month <- referral_sending_vol_site_data_month %>%
-    mutate(avg_referrals = round(Total/total_vol,2),
-           conversion_rate = round((Total - Pending)/Total,2),
-           completion_rate = round(Arrived/Total,2)) %>%
-    dplyr::select(SentBySpecialty, SentByDept, SentByDepID, Total, Arrived,  Pending, total_vol, avg_referrals, conversion_rate, completion_rate)
-  
- referral_sending_vol_site_data_month$SentByDepID <- NULL
-  
-  return(referral_sending_vol_site_data_month)
-}
+<!--   referral_vol_site_data_month_mshs <- referral_vol_site_data_month_mshs %>% -->
+<!--     mutate(Total = sum(across(where(is.numeric))))  -->
 
-```
+<!--   # Scheduling Data Filtered to Full Month  -->
+<!--   volume_site_specialty_dept_month <- volume_site_specialty_dept_trend %>% filter(Appt.MonthYear == yearMonth) -->
+<!--   waitTime_site_specialty_dept_trend_month <- waitTime_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth) -->
+<!--   new_access_site_specialty_dept_month <- new_access_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth) -->
+
+<!--   # Volume Last 3 Months -->
+<!--   referral_vol_site_data_month_mshs$total_vol <- volume_site_specialty_dept_month$total[match(referral_vol_site_data_month_mshs$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)] -->
+
+<!--   referral_vol_site_data_month_mshs <- referral_vol_site_data_month_mshs %>% -->
+<!--     adorn_totals("row", name = "MSHS Total") %>% -->
+<!--     mutate(conversion_rate = round((Total - Pending)/Total,2), -->
+<!--            completion_rate = round(Arrived/Total,2)) %>% -->
+<!--     dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate, total_vol) -->
+
+<!--   # New PT Volume Last 3 Months -->
+<!--   referral_vol_site_data_month_mshs$new_pts <- volume_site_specialty_dept_month$new_perc[match(referral_vol_site_data_month_mshs$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)] -->
+
+<!--   # Median New Wait Time Last 3 Months -->
+<!--   referral_vol_site_data_month_mshs$new_access <- waitTime_site_specialty_dept_trend_month$med_wait[match(referral_vol_site_data_month_mshs$ReceivedByDepID, waitTime_site_specialty_dept_trend_month$DepartmentId)] -->
+
+<!--   # New Patients Scheduled Last 3 Months -->
+<!--   referral_vol_site_data_month_mshs$new_14access_perc <- new_access_site_specialty_dept_month$perc_14days[match(referral_vol_site_data_month_mshs$ReceivedByDepID, new_access_site_specialty_dept_month$DepartmentId)] -->
+
+<!--   referral_vol_site_data_month_mshs$ReceivedByDepID <- NULL -->
+
+<!--   return(referral_vol_site_data_month_mshs) -->
+
+<!-- } -->
 
 
-```{r Referrals Receievd by Month, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
+<!-- # Site Breakdown Function Last and Current Year -------------------------------- -->
+<!-- received_vol_site_month <- function(site, monthYear, yearMonth){ -->
 
-# MSHS -------------------------------------------------------------------------
-mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP", 
-                         "MSM", "MSUS", "MSW", "Network", "Oncology")
+<!--   # site <- "MSBI" -->
+<!--   # monthYear <- full_monthYear -->
+<!--   # yearMonth <- full_yearMonth -->
+<!--   #  -->
+<!--   #  monthYear <- current_monthYear -->
+<!--   # yearMonth <- current_yearMonth -->
 
-
-  # Referrals Data by Month
-  referral_vol_specialty_data_mshs_trend <- referral_vol %>%
-    filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(ReceivedBySite %in% mshs_sites) %>%
-    filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
-    group_by(ReferredToDepartmentSpecialty, createdMonthYear, ApptStatusFinal) %>%
-    summarise(total_vol = n()) %>%
-    pivot_wider(names_from = ApptStatusFinal,
-                values_from = total_vol,
-                values_fill = 0) 
-  
-  referral_vol_specialty_data_mshs_trend <- referral_vol_specialty_data_mshs_trend %>%
-    mutate(Total = sum(across(where(is.numeric)))) 
-  
-  referral_vol_specialty_data_mshs_trend <- referral_vol_specialty_data_mshs_trend %>%
-    group_by(createdMonthYear) %>%
-    mutate(ReferredToDepartmentSpecialty = paste0("MSHS ",ReferredToDepartmentSpecialty)) %>%
-    bind_rows(summarise(.,
-                      across(where(is.integer), sum),
-                      across(where(is.character), ~"*MSHS All Specialties"))) %>%
-    mutate(conversion_rate = round((Total - Pending)/Total,2)*100,
-           completion_rate = round(Arrived/Total,2)*100) %>%
-    dplyr::select(ReferredToDepartmentSpecialty, createdMonthYear, Total, Arrived,  Pending, conversion_rate, completion_rate)
-  
-  referral_vol_specialty_data_mshs_trend <- referral_vol_specialty_data_mshs_trend %>%
-    mutate(createdMonthYear = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m")) %>%
-    arrange(createdMonthYear) %>%
-    arrange(ReferredToDepartmentSpecialty) 
-  
-  
-  
-referral_vol_specialty_data_site_trend <- function(site){
-  
-  # site <- "MSUS"
-  # Referrals Data by Month
-  referral_vol_specialty_data_site_trend <- referral_vol %>%
-    filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(ReceivedBySite %in% site) %>%
-    filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
-    group_by(ReferredToDepartmentSpecialty, createdMonthYear, ApptStatusFinal) %>%
-    summarise(total_vol = n()) %>%
-    pivot_wider(names_from = ApptStatusFinal,
-                values_from = total_vol,
-                values_fill = 0) 
-  
-  referral_vol_specialty_data_site_trend <- referral_vol_specialty_data_site_trend %>%
-    mutate(Total = sum(across(where(is.numeric)))) 
-  
-  referral_vol_specialty_data_site_trend <- referral_vol_specialty_data_site_trend %>%
-    group_by(createdMonthYear) %>%
-    mutate(ReferredToDepartmentSpecialty = paste0(site, " ", ReferredToDepartmentSpecialty)) %>%
-    bind_rows(summarise(.,
-                      across(where(is.integer), sum),
-                      across(where(is.character), ~ paste0("*",site, " All Specialties")))) %>%
-    mutate(conversion_rate = round((Total - Pending)/Total,2)*100,
-           completion_rate = round(Arrived/Total,2)*100) %>%
-    dplyr::select(ReferredToDepartmentSpecialty, createdMonthYear, Total, Arrived,  Pending, conversion_rate, completion_rate)
-  
-  referral_vol_specialty_data_site_trend <- referral_vol_specialty_data_site_trend %>%
-    mutate(createdMonthYear = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m")) %>%
-    arrange(createdMonthYear) %>%
-    arrange(ReferredToDepartmentSpecialty) 
-}
+<!--   # Referrals Data  -->
+<!--   referral_vol_site_data_month <- referral_vol %>% -->
+<!--     filter(ReceivedByDept != "*Unspecified") %>% -->
+<!--     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>% -->
+<!--     filter(ReceivedBySite == site) %>% -->
+<!--     filter(createdMonthYear == monthYear) %>% -->
+<!--     group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>% -->
+<!--     summarise(total_vol = n()) %>% -->
+<!--     pivot_wider(names_from = ApptStatusFinal, -->
+<!--                 values_from = total_vol, -->
+<!--                 values_fill = 0)  -->
 
 
-referral_sending_vol_specialty_data_site_trend <- function(site){
-  
-  # site <- "MSUS"
-  # Referrals Data by Month
-  referral_sending_vol_specialty_data_site_trend <- referral_vol %>%
-    filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(SentBySite != "*Unspecified") %>%
-    filter(SentBySpecialty != "*Unspecified") %>%
-    filter(SentBySite == site) %>%
-    filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
-    group_by(SentBySpecialty, createdMonthYear, ApptStatusFinal) %>%
-    summarise(total_vol = n()) %>%
-    pivot_wider(names_from = ApptStatusFinal,
-                values_from = total_vol,
-                values_fill = 0) 
-  
-  referral_sending_vol_specialty_data_site_trend <- referral_sending_vol_specialty_data_site_trend %>%
-    mutate(Total = sum(across(where(is.numeric)))) 
-  
-  
-  volume_yearMonth <- volume_site_specialty_dept_trend %>%
-    filter(Campus == site) %>%
-    group_by(Campus.Specialty, Appt.MonthYear) %>%
-    summarise(total_vol = sum(total)) %>%
-    mutate(Appt.MonthYear = format(as.Date(paste0(Appt.MonthYear,"-01")), "%m-%Y")) %>%
-    rename(createdMonthYear = Appt.MonthYear,
-           SentBySpecialty = Campus.Specialty)
-  
-  
-  referral_sending_vol_specialty_data_site_trend <- left_join(referral_sending_vol_specialty_data_site_trend, volume_yearMonth, by = c("SentBySpecialty","createdMonthYear"))
-  referral_sending_vol_specialty_data_site_trend$total_vol[is.na(rreferral_sending_vol_specialty_data_site_trend$total_vol)] <- 0
+<!--   # Add Missing ApptStatusFinal -->
+<!--   nms <- c("ReferredToDepartmentSpecialty", "ReceivedByDept", "ReceivedByDepID",  -->
+<!--           "Pending", "Arrived", "Canceled", "Scheduled", "No Show")   # Vector of columns you want in this data.frame -->
 
-  referral_sending_vol_specialty_data_site_trend <- referral_sending_vol_specialty_data_site_trend %>%
-    group_by(createdMonthYear) %>%
-    mutate(SentBySpecialty = paste0(site, " ", SentBySpecialty)) %>%
-    bind_rows(summarise(.,
-                      across(where(is.integer), sum),
-                      across(where(is.character), ~ paste0("*",site, " All Specialties")))) %>%
-    mutate(avg_referrals = round(Total/total_vol, 2),
-           conversion_rate = round((Total - Pending)/Total,2)*100,
-           completion_rate = round(Arrived/Total,2)*100) %>%
-    dplyr::select(SentBySpecialty, createdMonthYear, Total, Arrived,  Pending, avg_referrals, conversion_rate, completion_rate)
-  
-  referral_sending_vol_specialty_data_site_trend <- referral_sending_vol_specialty_data_site_trend %>%
-    mutate(createdMonthYear = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m")) %>%
-    arrange(createdMonthYear) %>%
-    arrange(SentBySpecialty) 
-}
-  
-```
+<!--   Missing <- setdiff(nms, names(referral_vol_site_data_month))  # Find names of missing columns -->
+<!--   referral_vol_site_data_month[Missing] <- 0                    # Add them, filled with '0's -->
+<!--   referral_vol_site_data_month <- referral_vol_site_data_month[nms]      -->
+
+
+<!--   referral_vol_site_data_month <- referral_vol_site_data_month %>% -->
+<!--     mutate(Total = sum(across(where(is.numeric))))  -->
+
+
+<!--   # Scheduling Data Filtered to Full/Current Month  -->
+<!--   volume_site_specialty_dept_month <- volume_site_specialty_dept_trend %>% filter(Appt.MonthYear == yearMonth) -->
+<!--   waitTime_site_specialty_dept_trend_month <- waitTime_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth) -->
+<!--   new_access_site_specialty_dept_month <- new_access_site_specialty_dept_trend %>% filter(Appt.Made.MonthYear == yearMonth) -->
+
+
+<!--   # Volume Last 3 Months -->
+<!--   referral_vol_site_data_month$total_vol <- volume_site_specialty_dept_month$total[match(referral_vol_site_data_month$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)] -->
+
+<!--   referral_vol_site_data_month <- referral_vol_site_data_month %>% -->
+<!--     adorn_totals("row", name = paste(site, "Total")) %>% -->
+<!--     mutate(conversion_rate = round((Total - Pending)/Total,2), -->
+<!--            completion_rate = round(Arrived/Total,2)) %>% -->
+<!--     dplyr::select(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, Total, Arrived,  Pending, conversion_rate, completion_rate, total_vol) -->
+
+
+<!--   # New PT Volume Last 3 Months -->
+<!--   referral_vol_site_data_month$new_pts <- volume_site_specialty_dept_month$new_perc[match(referral_vol_site_data_month$ReceivedByDepID, volume_site_specialty_dept_month$DepartmentId)] -->
+
+<!--   # Median New Wait Time Last 3 Months -->
+<!--   referral_vol_site_data_month$new_access <- waitTime_site_specialty_dept_trend_month$med_wait[match(referral_vol_site_data_month$ReceivedByDepID, waitTime_site_specialty_dept_trend_month$DepartmentId)] -->
+
+<!--   # New Patients Scheduled Last 3 Months -->
+<!--   referral_vol_site_data_month$new_14access_perc <- new_access_site_specialty_dept_month$perc_14days[match(referral_vol_site_data_month$ReceivedByDepID, new_access_site_specialty_dept_month$DepartmentId)] -->
+
+<!--   referral_vol_site_data_month$ReceivedByDepID <- NULL -->
+
+<!--   return(referral_vol_site_data_month) -->
+<!--   } -->
+
+
+<!-- ## Referrals by Sending Dept ---------------------------------------------------- -->
+<!-- sending_vol_site_month <- function(site, monthYear, yearMonth){ -->
+
+<!--   # site <- "MSHP" -->
+<!--   # Referrals Data  -->
+
+<!--   # monthYear <- current_monthYear -->
+<!--   # yearMonth <- "2023-01" -->
+
+<!--   referral_sending_vol_site_data_month <- referral_vol %>% -->
+<!--     filter(ReceivedByDept != "*Unspecified") %>% -->
+<!--     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>% -->
+<!--     filter(SentBySite != "*Unspecified") %>% -->
+<!--     filter(SentBySpecialty != "*Unspecified") %>% -->
+<!--     filter(SentBySite == site) %>% -->
+<!--     filter(createdMonthYear == monthYear) %>% -->
+<!--     # filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>% -->
+<!--     group_by(SentBySpecialty, SentByDept, SentByDepID, ApptStatusFinal) %>% -->
+<!--     summarise(total_vol = n()) %>% -->
+<!--     pivot_wider(names_from = ApptStatusFinal, -->
+<!--                 values_from = total_vol, -->
+<!--                 values_fill = 0)  -->
+
+<!--   referral_sending_vol_site_data_month <- referral_sending_vol_site_data_month %>% -->
+<!--     mutate(Total = sum(across(where(is.numeric))))  -->
+
+
+<!--   # Total Visit Volume  -->
+<!--   volume_yearMonth <- volume_site_specialty_dept_trend %>% -->
+<!--     filter(Appt.MonthYear == yearMonth) -->
+
+<!--   referral_sending_vol_site_data_month$total_vol <- volume_yearMonth$total[match(referral_sending_vol_site_data_month$SentByDepID, volume_yearMonth$DepartmentId)] -->
+<!--   referral_sending_vol_site_data_month$total_vol[is.na(referral_sending_vol_site_data_month$total_vol)] <- 0 -->
+
+<!--   referral_sending_vol_site_data_month <- referral_sending_vol_site_data_month %>% -->
+<!--     adorn_totals("row", name = paste(site, "Total")) -->
+
+<!--   referral_sending_vol_site_data_month <- referral_sending_vol_site_data_month %>% -->
+<!--     mutate(avg_referrals = round(Total/total_vol,2), -->
+<!--            conversion_rate = round((Total - Pending)/Total,2), -->
+<!--            completion_rate = round(Arrived/Total,2)) %>% -->
+<!--     dplyr::select(SentBySpecialty, SentByDept, SentByDepID, Total, Arrived,  Pending, total_vol, avg_referrals, conversion_rate, completion_rate) -->
+
+<!--  referral_sending_vol_site_data_month$SentByDepID <- NULL -->
+
+<!--   return(referral_sending_vol_site_data_month) -->
+<!-- } -->
+
+<!-- ``` -->
+
+
+<!-- ```{r Referrals Receievd by Month, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12} -->
+
+<!-- # MSHS ------------------------------------------------------------------------- -->
+<!-- mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",  -->
+<!--                          "MSM", "MSUS", "MSW", "Network", "Oncology") -->
+
+
+<!--   # Referrals Data by Month -->
+<!--   referral_vol_specialty_data_mshs_trend <- referral_vol %>% -->
+<!--     filter(ReceivedByDept != "*Unspecified") %>% -->
+<!--     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>% -->
+<!--     filter(ReceivedBySite %in% mshs_sites) %>% -->
+<!--     filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>% -->
+<!--     group_by(ReferredToDepartmentSpecialty, createdMonthYear, ApptStatusFinal) %>% -->
+<!--     summarise(total_vol = n()) %>% -->
+<!--     pivot_wider(names_from = ApptStatusFinal, -->
+<!--                 values_from = total_vol, -->
+<!--                 values_fill = 0)  -->
+
+<!--   referral_vol_specialty_data_mshs_trend <- referral_vol_specialty_data_mshs_trend %>% -->
+<!--     mutate(Total = sum(across(where(is.numeric))))  -->
+
+<!--   referral_vol_specialty_data_mshs_trend <- referral_vol_specialty_data_mshs_trend %>% -->
+<!--     group_by(createdMonthYear) %>% -->
+<!--     mutate(ReferredToDepartmentSpecialty = paste0("MSHS ",ReferredToDepartmentSpecialty)) %>% -->
+<!--     bind_rows(summarise(., -->
+<!--                       across(where(is.integer), sum), -->
+<!--                       across(where(is.character), ~"*MSHS All Specialties"))) %>% -->
+<!--     mutate(conversion_rate = round((Total - Pending)/Total,2)*100, -->
+<!--            completion_rate = round(Arrived/Total,2)*100) %>% -->
+<!--     dplyr::select(ReferredToDepartmentSpecialty, createdMonthYear, Total, Arrived,  Pending, conversion_rate, completion_rate) -->
+
+<!--   referral_vol_specialty_data_mshs_trend <- referral_vol_specialty_data_mshs_trend %>% -->
+<!--     mutate(createdMonthYear = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m")) %>% -->
+<!--     arrange(createdMonthYear) %>% -->
+<!--     arrange(ReferredToDepartmentSpecialty)  -->
+
+
+
+<!-- referral_vol_specialty_data_site_trend <- function(site){ -->
+
+<!--   # site <- "MSUS" -->
+<!--   # Referrals Data by Month -->
+<!--   referral_vol_specialty_data_site_trend <- referral_vol %>% -->
+<!--     filter(ReceivedByDept != "*Unspecified") %>% -->
+<!--     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>% -->
+<!--     filter(ReceivedBySite %in% site) %>% -->
+<!--     filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>% -->
+<!--     group_by(ReferredToDepartmentSpecialty, createdMonthYear, ApptStatusFinal) %>% -->
+<!--     summarise(total_vol = n()) %>% -->
+<!--     pivot_wider(names_from = ApptStatusFinal, -->
+<!--                 values_from = total_vol, -->
+<!--                 values_fill = 0)  -->
+
+<!--   referral_vol_specialty_data_site_trend <- referral_vol_specialty_data_site_trend %>% -->
+<!--     mutate(Total = sum(across(where(is.numeric))))  -->
+
+<!--   referral_vol_specialty_data_site_trend <- referral_vol_specialty_data_site_trend %>% -->
+<!--     group_by(createdMonthYear) %>% -->
+<!--     mutate(ReferredToDepartmentSpecialty = paste0(site, " ", ReferredToDepartmentSpecialty)) %>% -->
+<!--     bind_rows(summarise(., -->
+<!--                       across(where(is.integer), sum), -->
+<!--                       across(where(is.character), ~ paste0("*",site, " All Specialties")))) %>% -->
+<!--     mutate(conversion_rate = round((Total - Pending)/Total,2)*100, -->
+<!--            completion_rate = round(Arrived/Total,2)*100) %>% -->
+<!--     dplyr::select(ReferredToDepartmentSpecialty, createdMonthYear, Total, Arrived,  Pending, conversion_rate, completion_rate) -->
+
+<!--   referral_vol_specialty_data_site_trend <- referral_vol_specialty_data_site_trend %>% -->
+<!--     mutate(createdMonthYear = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m")) %>% -->
+<!--     arrange(createdMonthYear) %>% -->
+<!--     arrange(ReferredToDepartmentSpecialty)  -->
+<!-- } -->
+
+
+<!-- referral_sending_vol_specialty_data_site_trend <- function(site){ -->
+
+<!--   # site <- "MSUS" -->
+<!--   # Referrals Data by Month -->
+<!--   referral_sending_vol_specialty_data_site_trend <- referral_vol %>% -->
+<!--     filter(ReceivedByDept != "*Unspecified") %>% -->
+<!--     filter(ReferredToDepartmentSpecialty != "*Unspecified") %>% -->
+<!--     filter(SentBySite != "*Unspecified") %>% -->
+<!--     filter(SentBySpecialty != "*Unspecified") %>% -->
+<!--     filter(SentBySite == site) %>% -->
+<!--     filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>% -->
+<!--     group_by(SentBySpecialty, createdMonthYear, ApptStatusFinal) %>% -->
+<!--     summarise(total_vol = n()) %>% -->
+<!--     pivot_wider(names_from = ApptStatusFinal, -->
+<!--                 values_from = total_vol, -->
+<!--                 values_fill = 0)  -->
+
+<!--   referral_sending_vol_specialty_data_site_trend <- referral_sending_vol_specialty_data_site_trend %>% -->
+<!--     mutate(Total = sum(across(where(is.numeric))))  -->
+
+
+<!--   volume_yearMonth <- volume_site_specialty_dept_trend %>% -->
+<!--     filter(Campus == site) %>% -->
+<!--     group_by(Campus.Specialty, Appt.MonthYear) %>% -->
+<!--     summarise(total_vol = sum(total)) %>% -->
+<!--     mutate(Appt.MonthYear = format(as.Date(paste0(Appt.MonthYear,"-01")), "%m-%Y")) %>% -->
+<!--     rename(createdMonthYear = Appt.MonthYear, -->
+<!--            SentBySpecialty = Campus.Specialty) -->
+
+
+<!--   referral_sending_vol_specialty_data_site_trend <- left_join(referral_sending_vol_specialty_data_site_trend, volume_yearMonth, by = c("SentBySpecialty","createdMonthYear")) -->
+<!--   referral_sending_vol_specialty_data_site_trend$total_vol[is.na(rreferral_sending_vol_specialty_data_site_trend$total_vol)] <- 0 -->
+
+<!--   referral_sending_vol_specialty_data_site_trend <- referral_sending_vol_specialty_data_site_trend %>% -->
+<!--     group_by(createdMonthYear) %>% -->
+<!--     mutate(SentBySpecialty = paste0(site, " ", SentBySpecialty)) %>% -->
+<!--     bind_rows(summarise(., -->
+<!--                       across(where(is.integer), sum), -->
+<!--                       across(where(is.character), ~ paste0("*",site, " All Specialties")))) %>% -->
+<!--     mutate(avg_referrals = round(Total/total_vol, 2), -->
+<!--            conversion_rate = round((Total - Pending)/Total,2)*100, -->
+<!--            completion_rate = round(Arrived/Total,2)*100) %>% -->
+<!--     dplyr::select(SentBySpecialty, createdMonthYear, Total, Arrived,  Pending, avg_referrals, conversion_rate, completion_rate) -->
+
+<!--   referral_sending_vol_specialty_data_site_trend <- referral_sending_vol_specialty_data_site_trend %>% -->
+<!--     mutate(createdMonthYear = format(as.yearmon(createdMonthYear, "%m-%Y"),"%Y-%m")) %>% -->
+<!--     arrange(createdMonthYear) %>% -->
+<!--     arrange(SentBySpecialty)  -->
+<!-- } -->
+
+<!-- ``` -->
 
 
 ```{r Referrals Lead Days to Scheduling by Month, echo = FALSE, warning = FALSE, message = FALSE, fig.width=12}
