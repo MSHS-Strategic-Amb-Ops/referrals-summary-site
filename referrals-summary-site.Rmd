@@ -988,7 +988,16 @@ sending_vol_site_month <- function(site, monthYear, yearMonth){
     pivot_wider(names_from = ApptStatusFinal,
                 values_from = total_vol,
                 values_fill = 0)
+  
+  # Add Missing ApptStatusFinal
+  nms <- c("SentBySpecialty", "SentByDept", "SentByDepID",
+          "Pending", "Arrived", "Canceled", "Scheduled", "No Show")   # Vector of columns you want in this data.frame
 
+  Missing <- setdiff(nms, names(referral_sending_vol_site_data_month))  # Find names of missing columns
+  referral_sending_vol_site_data_month[Missing] <- 0                    # Add them, filled with '0's
+  referral_sending_vol_site_data_month <- referral_sending_vol_site_data_month[nms]
+
+  
   referral_sending_vol_site_data_month <- referral_sending_vol_site_data_month %>%
     mutate(Total = sum(across(where(is.numeric))))
 
@@ -1108,6 +1117,16 @@ referral_sending_vol_specialty_data_site_trend <- function(site){
                 values_from = total_vol,
                 values_fill = 0)
 
+  
+  # Add Missing ApptStatusFinal
+  nms <- c("SentBySpecialty", "createdMonthYear", 
+          "Pending", "Arrived", "Canceled", "Scheduled", "No Show")   # Vector of columns you want in this data.frame
+
+  Missing <- setdiff(nms, names(referral_sending_vol_specialty_data_site_trend))  # Find names of missing columns
+  referral_sending_vol_specialty_data_site_trend[Missing] <- 0                    # Add them, filled with '0's
+  referral_sending_vol_specialty_data_site_trend <- referral_sending_vol_specialty_data_site_trend[nms]
+  
+  
   referral_sending_vol_specialty_data_site_trend <- referral_sending_vol_specialty_data_site_trend %>%
     mutate(Total = sum(across(where(is.numeric))))
 
