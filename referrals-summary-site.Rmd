@@ -1215,7 +1215,7 @@ referral_sending_vol_specialty_data_site_trend <- function(site){
 *Report Run Date: `r report_run_date`*<br/>
 *Data Date Range: From 2022-09-01 to `r report_run_date - 1`*<br/>
 *Data Source: EPIC Caboodle Referrals Data and Clarity Scheduling Data*<br/>
-**MSHS does not include MSHP as receiving site**<br/>
+*MSHS does not include MSHP as a receiving site*<br/>
 
 :::: {.blackbox data-latex=""}
 ::: {.center data-latex=""}
