@@ -694,7 +694,6 @@ mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",
   # Referrals Received Data 
   referral_vol_site_data_mshs <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
     filter(ReceivedBySite %in% mshs_sites) %>%
     filter(createdYear == current_year) %>%
     # filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
@@ -706,7 +705,6 @@ mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",
   
   monthly_avg <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
     filter(ReceivedBySite %in% mshs_sites) %>%
     filter(createdYear == current_year) %>%
     # filter(StartInstant < as.Date("2023-03-01") & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
@@ -757,7 +755,6 @@ received_vol_site_ytd <- function(site){
   # Referrals Data 
   referral_vol_site_data <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
     filter(ReceivedBySite == site) %>%
     filter(createdYear == current_year) %>%
     # filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
@@ -803,9 +800,6 @@ sending_vol_site_ytd <- function(site){
   # Referrals Data 
   referral_sending_vol_site_data <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(SentBySite != "*Unspecified") %>%
-    filter(SentBySpecialty != "*Unspecified") %>%
     filter(SentBySite == site) %>%
     filter(createdYear == current_year) %>%
     # filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
@@ -862,7 +856,6 @@ referral_vol_site_data_mshs_month <- function(monthYear, yearMonth){
   # Referrals Data
   referral_vol_site_data_month_mshs <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
     filter(ReceivedBySite %in% mshs_sites) %>%
     filter(createdMonthYear == monthYear) %>%
     group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>%
@@ -918,7 +911,6 @@ received_vol_site_month <- function(site, monthYear, yearMonth){
   # Referrals Data
   referral_vol_site_data_month <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
     filter(ReceivedBySite == site) %>%
     filter(createdMonthYear == monthYear) %>%
     group_by(ReferredToDepartmentSpecialty, ReceivedByDept, ReceivedByDepID, ApptStatusFinal) %>%
@@ -983,9 +975,6 @@ sending_vol_site_month <- function(site, monthYear, yearMonth){
 
   referral_sending_vol_site_data_month <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(SentBySite != "*Unspecified") %>%
-    filter(SentBySpecialty != "*Unspecified") %>%
     filter(SentBySite == site) %>%
     filter(createdMonthYear == monthYear) %>%
     # filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
@@ -1042,7 +1031,6 @@ mshs_sites <- c("MSBI", "MSDMG", "MSH- Ambulatory Care", "MSH-MSDFP",
   # Referrals Data by Month
   referral_vol_specialty_data_mshs_trend <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
     filter(ReceivedBySite %in% mshs_sites) %>%
     filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
     group_by(ReferredToDepartmentSpecialty, createdMonthYear, ApptStatusFinal) %>%
@@ -1077,7 +1065,6 @@ referral_vol_specialty_data_site_trend <- function(site){
   # Referrals Data by Month
   referral_vol_specialty_data_site_trend <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
     filter(ReceivedBySite %in% site) %>%
     filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
     group_by(ReferredToDepartmentSpecialty, createdMonthYear, ApptStatusFinal) %>%
@@ -1112,9 +1099,6 @@ referral_sending_vol_specialty_data_site_trend <- function(site){
   # Referrals Data by Month
   referral_sending_vol_specialty_data_site_trend <- referral_vol %>%
     filter(ReceivedByDept != "*Unspecified") %>%
-    filter(ReferredToDepartmentSpecialty != "*Unspecified") %>%
-    filter(SentBySite != "*Unspecified") %>%
-    filter(SentBySpecialty != "*Unspecified") %>%
     filter(SentBySite == site) %>%
     filter(StartInstant < report_run_date & StartInstant >= as.Date("2022-09-01", "%Y-%m-%d")) %>%
     group_by(SentBySpecialty, createdMonthYear, ApptStatusFinal) %>%
